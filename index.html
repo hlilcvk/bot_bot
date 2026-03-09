@@ -220,14 +220,8 @@
             </div>
 
             <div class="form-group">
-                <label for="tg_template">Telegram Mesaj Şablonu</label>
-                <select id="tg_template" onchange="updatePreview('tg')">
-                    <option value="T1">Şablon 1 (Resmi Radar - Detaylı)</option>
-                    <option value="T2">Şablon 2 (Balina/Acil Alarm Tarzı)</option>
-                    <option value="T3">Şablon 3 (Teknik Analiz / Kırılım Tarzı)</option>
-                    <option value="T4">Şablon 4 (Kısa & Öz Momentum Tarzı)</option>
-                </select>
-                <div id="tg_preview" class="template-preview"></div>
+                <p style="font-size: 11px; color: var(--t4); margin-top: 5px;">* Sistem artık dinamik olarak LONG ve
+                    SHORT yönlerini tespit edip profesyonel tek bir şablon ile paylaşım yapmaktadır.</p>
             </div>
 
             <div class="form-group" style="margin-top: 20px;">
@@ -257,14 +251,8 @@
             </div>
 
             <div class="form-group">
-                <label for="tw_template">X (Twitter) Mesaj Şablonu</label>
-                <select id="tw_template" onchange="updatePreview('tw')">
-                    <option value="T1">Şablon 1 (Resmi Radar - Detaylı)</option>
-                    <option value="T2">Şablon 2 (Balina/Acil Alarm Tarzı)</option>
-                    <option value="T3">Şablon 3 (Teknik Analiz / Kırılım Tarzı)</option>
-                    <option value="T4">Şablon 4 (Kısa & Öz Momentum Tarzı)</option>
-                </select>
-                <div id="tw_preview" class="template-preview"></div>
+                <p style="font-size: 11px; color: var(--t4); margin-top: 5px;">* X (Twitter) paylaşımları da otomatik
+                    olarak dinamik şablonu kullanacaktır.</p>
             </div>
 
             <div class="form-group" style="margin-top: 20px;">
@@ -308,18 +296,6 @@
     <script>
         const API_URL = ""; // Coolify ortamında bu ayarlanabilir
 
-        const templates = {
-            "T1": "🚀 PROPTREX FUTURES PUMP RADAR 🚀\n\n📌 Coin: #BTCUSDT\n📊 Piyasa: Vadeli İşlemler (Futures)\n📈 Fiyat: $96000.50\n⚡️ Hacim Patlamasi: 3.5x\n🔥 AI Skoru: 92/100\n🎯 Öneri: TP1 $98880.00\n\nDetaylar için Proptrex Radar'ı kontrol edin!",
-            "T2": "🚨 FUTURES BALINA ALARMI (PUMP) 🚨\n\nYapay zeka #BTCUSDT coininde ani hacim artisi tespit etti!\n\n📊 Piyasa: Vadeli İşlemler\n💰 Anlik: $96000.50\n📈 Hacim Carpani: 3.5x\n\nErken yakalamak için Proptrex V5'e giriş yapın. ⚡️",
-            "T3": "🔥 GÜÇLÜ FUTURES AL SINYALI! 🔥\n\nProptrex Algo #BTCUSDT grafiginde direnc kirilimi tespit etti. (Skor: 92)\nFiyat su an $96000.50 civarinda ve hacim 3.5x artis gosterdi.\n\nRisk=Odul oraniniza dikkat ederek vadeli işlemlerde degerlendirin.",
-            "T4": "#BTCUSDT Harekete Geciyor (Futures)! 🚀\n\n🎯 AI Sinyal Skoru: 92/100\n📈 Giris Bandi: $95040.00 - $96960.00\n💡 Strateji: Momentum (Hacim 3.5x)\n\nDetaylı analizi görmek için Proptrex V5 platformunu ziyaret edin."
-        };
-
-        function updatePreview(type) {
-            const val = document.getElementById(type + '_template').value;
-            document.getElementById(type + '_preview').innerText = "Önizleme:\n" + templates[val];
-        }
-
         // Load existing settings
         async function loadSettings() {
             try {
@@ -329,14 +305,12 @@
                     document.getElementById('tg_token').value = data.tg_token || "";
                     document.getElementById('tg_chat_id').value = data.tg_chat_id || "";
                     document.getElementById('tg_enabled').checked = data.tg_enabled || false;
-                    if (data.tg_template) document.getElementById('tg_template').value = data.tg_template;
 
                     document.getElementById('tw_api_key').value = data.tw_api_key || "";
                     document.getElementById('tw_api_secret').value = data.tw_api_secret || "";
                     document.getElementById('tw_access_token').value = data.tw_access_token || "";
                     document.getElementById('tw_access_secret').value = data.tw_access_secret || "";
                     document.getElementById('tw_enabled').checked = data.tw_enabled || false;
-                    if (data.tw_template) document.getElementById('tw_template').value = data.tw_template;
 
                     document.getElementById('ref_binance').value = data.ref_binance || "";
                     document.getElementById('ref_mexc').value = data.ref_mexc || "";
@@ -386,13 +360,11 @@
                 tg_token: document.getElementById('tg_token').value,
                 tg_chat_id: document.getElementById('tg_chat_id').value,
                 tg_enabled: document.getElementById('tg_enabled').checked,
-                tg_template: document.getElementById('tg_template').value,
                 tw_api_key: document.getElementById('tw_api_key').value,
                 tw_api_secret: document.getElementById('tw_api_secret').value,
                 tw_access_token: document.getElementById('tw_access_token').value,
                 tw_access_secret: document.getElementById('tw_access_secret').value,
                 tw_enabled: document.getElementById('tw_enabled').checked,
-                tw_template: document.getElementById('tw_template').value,
                 ref_binance: document.getElementById('ref_binance').value,
                 ref_mexc: document.getElementById('ref_mexc').value,
                 ref_gate: document.getElementById('ref_gate').value,

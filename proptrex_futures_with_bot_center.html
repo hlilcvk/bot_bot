@@ -5333,8 +5333,6 @@
             try {
                 const raw = JSON.parse(localStorage.getItem('px_bot_center_cfg_v1') || '{}');
                 if (raw.baseUrl) Z.bot.baseUrl = raw.baseUrl;
-                else Z.bot.baseUrl = window.location.protocol + "//" + window.location.host;
-
                 if (raw.wsUrl) Z.bot.wsUrl = raw.wsUrl;
                 if (raw.exchanges) Z.bot.exchanges = Object.assign(botDefaultExchangeMap(), raw.exchanges);
                 if (isFinite(Number(raw.minNotional))) Z.bot.minNotional = Number(raw.minNotional);
