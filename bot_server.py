@@ -63,6 +63,8 @@ class BotConfig(BaseModel):
     ref_binance: str = "https://www.binance.com/activity/referral-entry/CPA?ref=CPA_00WPSCQYZA&utm_source=electron"
     ref_mexc: str = "https://promote.mexc.fm/r/KVaJdo8ook"
     ref_gate: str = "https://app.mbm06.com/referral/earn-together/invite/U1dNV1pe?ref=U1dNV1pe&ref_type=103&utm_cmp=rXJBDjtJ&activity_id=1772462196891"
+    promo_link: str = "https://proptrex.com.tr"
+    promo_enabled: bool = True
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -121,16 +123,30 @@ def send_twitter(config, message):
     except Exception as e:
         print(f"Twitter hatasi: {e}")
 
-def trigger_social_alerts(sym, price, m1, score):
+def trigger_social_alerts(sym, price, m1, score, exchange="BIN", market_type="Vadeli İşlemler (Futures)"):
     config = load_config()
     
-    ref_links = f"\nİşlem yapmak için referanslarımız:\nBinance: {config.get('ref_binance', '')}\nMEXC: {config.get('ref_mexc', '')}\nGate.io: {config.get('ref_gate', '')}\n"
+    ref_link = ""
+    exchange_name = ""
+    if exchange == "BIN":
+        ref_link = config.get('ref_binance', '')
+        exchange_name = "Binance"
+    elif exchange == "MEXC":
+        ref_link = config.get('ref_mexc', '')
+        exchange_name = "MEXC"
+    elif exchange == "GATE" or exchange == "GATEIO":
+        ref_link = config.get('ref_gate', '')
+        exchange_name = "Gate.io"
+        
+    ref_links = f"\nİşlem yapmak için referansımız:\n{exchange_name}: {ref_link}\n" if ref_link else ""
+
+    promo_text = f"\n🤖 Proptrex'e Kayıt/Erişim İçin:\n👉 {config.get('promo_link', '')}\n" if config.get("promo_enabled") else ""
 
     templates = {
-        "T1": "🚀 PROPTREX PUMP RADAR 🚀\n\n📌 Coin: #{sym}\n📈 Fiyat: ${price:.4f}\n⚡️ Hacim Patlamasi: {m1:.1f}x\n🔥 AI Skoru: {score}/100\n🎯 Öneri: TP1 ${price_tp:.3f}\n\n🤖 Erısım Icin Onkayit: proptrex.com.tr" + ref_links,
-        "T2": "🚨 BALINA ALARMI (PUMP) 🚨\n\nYapay zeka #{sym} coininde ani hacim artisi tespit etti!\n\n💰 Anlik: ${price:.4f}\n📊 Kuvvet: {score} Puan\n📈 Hacim Carpani: {m1:.1f}x\n\nErken yakalamak icin Proptrex V5 On Kayit ⚡️\nLink: proptrex.com.tr" + ref_links,
-        "T3": "🔥 GÜÇLÜ AL SINYALI! 🔥\n\nProptrex Algo #{sym} grafiginde direnc kirilimi tespit etti. (Skor: {score})\nFiyat su an ${price:.4f} civarinda ve hacim {m1:.1f}x artis gosterdi.\n\nRisk=Odul oranina dikkat ederek degerlendirin. (Detaylar: proptrex.com.tr)" + ref_links,
-        "T4": "#{sym} Harekete Geciyor! 🚀\n\n🎯 AI Sinyal Skoru: {score}/100\n📈 Giris Bandi: ${price_low:.4f} - ${price_high:.4f}\n💡 Strateji: Momentum (Hacim {m1:.1f}x)\n\nAlgoritmaya erken erisim icin On Kayit yapmayi unutmayin: proptrex.com.tr" + ref_links
+        "T1": f"🚀 PROPTREX PUMP RADAR 🚀\n\n📌 Coin: #{sym}\n📊 Piyasa: {market_type}\n📈 Fiyat: ${price:.4f}\n⚡️ Hacim Patlamasi: {m1:.1f}x\n🔥 AI Skoru: {score}/100\n🎯 Öneri: TP1 ${price*1.03:.3f}\n" + promo_text + ref_links,
+        "T2": f"🚨 BALINA ALARMI (PUMP) 🚨\n\nYapay zeka #{sym} coininde ani hacim artisi tespit etti!\n\n📊 Piyasa: {market_type}\n💰 Anlik: ${price:.4f}\n📈 Hacim Carpani: {m1:.1f}x\n" + promo_text + ref_links,
+        "T3": f"🔥 GÜÇLÜ AL SINYALI! 🔥\n\nProptrex Algo #{sym} grafiginde direnc kirilimi tespit etti. (Skor: {score})\nFiyat su an ${price:.4f} civarinda ve hacim {m1:.1f}x artis gosterdi.\n\nRisk=Odul oraniniza dikkat ederek ({market_type}) degerlendirin.\n" + promo_text + ref_links,
+        "T4": f"#{sym} Harekete Geciyor ({market_type})! 🚀\n\n🎯 AI Sinyal Skoru: {score}/100\n📈 Giris Bandi: ${price*0.99:.4f} - ${price*1.01:.4f}\n💡 Strateji: Momentum (Hacim {m1:.1f}x)\n" + promo_text + ref_links
     }
     
     price_tp = price * 1.03
@@ -147,20 +163,22 @@ def trigger_social_alerts(sym, price, m1, score):
         msg_tw = templates.get(tw_key, templates["T1"]).format(sym=sym, price=price, m1=m1, score=score, price_tp=price_tp, price_low=price_low, price_high=price_high)
         send_twitter(config, msg_tw)
 
-def process_ticker(ticker_data):
+def process_ticker(ticker_data, market_type="Vadeli İşlemler (Futures)"):
     sym = ticker_data['s']
     if not sym.endswith("USDT"): return None
+    
+    unique_sym_key = f"{market_type}_{sym}"
     
     price = float(ticker_data['c'])
     vol_quote = float(ticker_data['q'])
     price_change_pct = float(ticker_data['P'])
     now = time.time()
     
-    if sym not in market_state:
-        market_state[sym] = {"last_price": price, "last_vol": vol_quote, "last_time": now, "pump_score": 0, "phase": "Sıkışma", "category": "PRE-PUMP CANDIDATES", "last_alert_time": 0, "m1_price": price, "m3_price": price, "m5_price": price}
+    if unique_sym_key not in market_state:
+        market_state[unique_sym_key] = {"last_price": price, "last_vol": vol_quote, "last_time": now, "pump_score": 0, "phase": "Sıkışma", "category": "PRE-PUMP CANDIDATES", "last_alert_time": 0, "m1_price": price, "m3_price": price, "m5_price": price}
         return None
         
-    prev = market_state[sym]
+    prev = market_state[unique_sym_key]
     time_diff = now - prev["last_time"]
     if time_diff < 1.0: return None
         
@@ -209,7 +227,7 @@ def process_ticker(ticker_data):
         status = "İzleme"
         phase = "Sıkışma"
 
-    market_state[sym].update({"last_price": price, "last_vol": vol_quote, "last_time": now, "pump_score": current_score, "phase": phase, "category": cat})
+    market_state[unique_sym_key].update({"last_price": price, "last_vol": vol_quote, "last_time": now, "pump_score": current_score, "phase": phase, "category": cat})
     
     if score_increase == 0 and current_score < 50: return None
     
@@ -219,7 +237,7 @@ def process_ticker(ticker_data):
     m5_pct = ((price - prev.get("m5_price", price)) / prev.get("m5_price", price)) * 100 if prev.get("m5_price", price) > 0 else 0
         
     item = {
-        "symbol": sym, "exchange": "BIN", "type": "PERP", "score": int(current_score),
+        "symbol": f"{sym} ({'SPOT' if 'Spot' in market_type else 'PERP'})", "exchange": "BIN", "type": "SPOT" if "Spot" in market_type else "PERP", "score": int(current_score),
         "phase": phase, "price": f"{price:.4f}", "m1": f"{m1_pct:+.1f}", "m3": f"{m3_pct:+.1f}",
         "m5": f"{m5_pct:+.1f}", "volx": f"{volx:.1f}x", "buy_pct": 75, "obi": "1.50", "cvd": "↑" if price_diff_pct > 0 else "↓",
         "spread": "Daraldı" if volx > 2.0 else "Stabil", "ask_sweep": "Süpürüyor" if volx > 3.0 else "İnceliyor", "bid_stack": "Güçlü", "oi_delta": f"{price_change_pct:+.1f}%",
@@ -232,8 +250,8 @@ def process_ticker(ticker_data):
     
     if cat == "TRIGGERED NOW" and current_score > 88:
         if now - prev["last_alert_time"] > 300:
-            market_state[sym]["last_alert_time"] = now
-            trigger_social_alerts(sym, price, volx, int(current_score))
+            market_state[unique_sym_key]["last_alert_time"] = now
+            trigger_social_alerts(sym, price, volx, int(current_score), "BIN", market_type)
             
     return item
 
@@ -248,14 +266,17 @@ async def get_platform():
 @app.get("/snapshot")
 async def get_snapshot():
     items = []
-    for sym, state in market_state.items():
+    for unique_sym_key, state in market_state.items():
         if state["pump_score"] > 20:
             price = state["last_price"]
             cat = state["category"]
             status = state["phase"]
             current_score = state["pump_score"]
+            is_spot = "Spot" in unique_sym_key
+            sym_display = unique_sym_key.split("_")[1]
+            
             items.append({
-                "symbol": sym, "exchange": "BIN", "direction": "LONG", "score": int(current_score),
+                "symbol": f"{sym_display} ({'SPOT' if is_spot else 'PERP'})", "exchange": "BIN", "direction": "LONG", "score": int(current_score),
                 "phase": status, "price": f"{price:.4f}", "m1": "1.0", "m3": "1.5", "m5": "2.0",
                 "volx": "1.5x", "buy_pct": 75, "obi": "1.50", "cvd": "↑", "spread": "Stabil",
                 "ask_sweep": "-", "bid_stack": "-", "oi_delta": "-", "trigger": "-",
@@ -278,6 +299,7 @@ async def ws_events(websocket: WebSocket):
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(binance_ws_loop())
+    asyncio.create_task(binance_spot_ws_loop())
 
 async def binance_ws_loop():
     uri = "wss://fstream.binance.com/ws/!ticker@arr"
@@ -289,7 +311,7 @@ async def binance_ws_loop():
                     data = await ws.recv()
                     payload = json.loads(data)
                     for ticker in payload:
-                        item = process_ticker(ticker)
+                        item = process_ticker(ticker, "Vadeli İşlemler (Futures)")
                         if item:
                             await manager.broadcast({
                                 "type": "scanner_update",
@@ -297,7 +319,28 @@ async def binance_ws_loop():
                                 "data": item
                             })
         except Exception as e:
-            print(f"Binance WS Hatasi (Yeniden baglaniliyor...): {e}")
+            print(f"Binance Futures WS Hatasi (Yeniden baglaniliyor...): {e}")
+            await asyncio.sleep(5)
+
+async def binance_spot_ws_loop():
+    uri = "wss://stream.binance.com:9443/ws/!ticker@arr"
+    while True:
+        try:
+            async with websockets.connect(uri) as ws:
+                print("Binance Spot WebSocket'e baglanildi.")
+                while True:
+                    data = await ws.recv()
+                    payload = json.loads(data)
+                    for ticker in payload:
+                        item = process_ticker(ticker, "Spot Piyasası")
+                        if item:
+                            await manager.broadcast({
+                                "type": "scanner_update",
+                                "ts_recv": int(time.time()*1000),
+                                "data": item
+                            })
+        except Exception as e:
+            print(f"Binance Spot WS Hatasi (Yeniden baglaniliyor...): {e}")
             await asyncio.sleep(5)
 
 if __name__ == "__main__":

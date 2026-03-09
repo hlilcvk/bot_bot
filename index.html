@@ -288,6 +288,19 @@
                 <input type="text" id="ref_gate" name="ref_gate" placeholder="https://www.gate.io/...">
             </div>
 
+            <h2 style="margin-top: 35px;">Ön Kayıt / Yönlendirme Linki (Tüm Mesajların Altına Eklenir)</h2>
+            <div class="form-group">
+                <label for="promo_link">Yönlendirme Linki (Örn: https://proptrex.com.tr)</label>
+                <input type="text" id="promo_link" name="promo_link" placeholder="https://proptrex.com.tr">
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="promo_enabled" name="promo_enabled"> <span>Ön Kayıt / Tanıtım Metnini
+                        Aktif Et</span>
+                </label>
+            </div>
+
             <button type="submit" style="margin-top: 30px;">Ayarları Kaydet ve Sunucuya Uygula</button>
         </form>
     </div>
@@ -296,10 +309,10 @@
         const API_URL = ""; // Coolify ortamında bu ayarlanabilir
 
         const templates = {
-            "T1": "🚀 PROPTREX PUMP RADAR 🚀\n\n📌 Coin: #BTCUSDT\n📈 Fiyat: $96000.50\n⚡️ Hacim Patlaması: 3.5x\n🔥 AI Skoru: 92/100\n🎯 Öneri: TP1 $98880.00\n\nDetaylar için Proptrex Radar'ı kontrol edin!",
-            "T2": "🚨 BALINA ALARMI (PUMP) 🚨\n\nYapay zeka #BTCUSDT coininde ani hacim artışı tespit etti!\n\n💰 Anlık: $96000.50\n📊 Kuvvet: 92 Puan\n📈 Hacim Çarpanı: 3.5x\n\nErken yakalamak için Proptrex V5'e giriş yapın. ⚡️",
-            "T3": "🔥 GÜÇLÜ AL SİNYALİ! 🔥\n\nProptrex Algo #BTCUSDT grafiğinde direnç kırılımı tespit etti. (Skor: 92)\nFiyat şu an $96000.50 civarında ve hacim 3.5x artış gösterdi.\n\nRisk=Ödül oranına dikkat ederek değerlendirebilirsiniz.",
-            "T4": "#BTCUSDT Harekete Geçiyor! 🚀\n\n🎯 AI Sinyal Skoru: 92/100\n📈 Giriş Bandı: $95040.00 - $96960.00\n💡 Strateji: Momentum (Hacim 3.5x)\n\nDetaylı analizi görmek için Proptrex V5 platformunu ziyaret edin."
+            "T1": "🚀 PROPTREX FUTURES PUMP RADAR 🚀\n\n📌 Coin: #BTCUSDT\n📊 Piyasa: Vadeli İşlemler (Futures)\n📈 Fiyat: $96000.50\n⚡️ Hacim Patlamasi: 3.5x\n🔥 AI Skoru: 92/100\n🎯 Öneri: TP1 $98880.00\n\nDetaylar için Proptrex Radar'ı kontrol edin!",
+            "T2": "🚨 FUTURES BALINA ALARMI (PUMP) 🚨\n\nYapay zeka #BTCUSDT coininde ani hacim artisi tespit etti!\n\n📊 Piyasa: Vadeli İşlemler\n💰 Anlik: $96000.50\n📈 Hacim Carpani: 3.5x\n\nErken yakalamak için Proptrex V5'e giriş yapın. ⚡️",
+            "T3": "🔥 GÜÇLÜ FUTURES AL SINYALI! 🔥\n\nProptrex Algo #BTCUSDT grafiginde direnc kirilimi tespit etti. (Skor: 92)\nFiyat su an $96000.50 civarinda ve hacim 3.5x artis gosterdi.\n\nRisk=Odul oraniniza dikkat ederek vadeli işlemlerde degerlendirin.",
+            "T4": "#BTCUSDT Harekete Geciyor (Futures)! 🚀\n\n🎯 AI Sinyal Skoru: 92/100\n📈 Giris Bandi: $95040.00 - $96960.00\n💡 Strateji: Momentum (Hacim 3.5x)\n\nDetaylı analizi görmek için Proptrex V5 platformunu ziyaret edin."
         };
 
         function updatePreview(type) {
@@ -328,6 +341,9 @@
                     document.getElementById('ref_binance').value = data.ref_binance || "";
                     document.getElementById('ref_mexc').value = data.ref_mexc || "";
                     document.getElementById('ref_gate').value = data.ref_gate || "";
+
+                    document.getElementById('promo_link').value = data.promo_link || "";
+                    document.getElementById('promo_enabled').checked = data.promo_enabled !== undefined ? data.promo_enabled : true;
                 }
             } catch (error) {
                 console.error("Config yüklenemedi:", error);
@@ -379,7 +395,9 @@
                 tw_template: document.getElementById('tw_template').value,
                 ref_binance: document.getElementById('ref_binance').value,
                 ref_mexc: document.getElementById('ref_mexc').value,
-                ref_gate: document.getElementById('ref_gate').value
+                ref_gate: document.getElementById('ref_gate').value,
+                promo_link: document.getElementById('promo_link').value,
+                promo_enabled: document.getElementById('promo_enabled').checked
             };
 
             try {
