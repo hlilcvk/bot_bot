@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PROPTREX Market Panel</title>
+    <style>
+        :root {
+            --bg: #f5f7fb;
+            --card: #ffffff;
+            --line: #e7ebf3;
+            --text: #111827;
+            --muted: #6b7280;
+            --soft: #94a3b8;
+            --green: #14b87a;
+            --red: #ef4444;
+            --amber: #f59e0b;
+            --blue: #2563eb;
+            --chip: #f1f5f9;
+            --shadow: 0 12px 30px rgba(15, 23, 42, .06);
+            --radius: 18px;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+            color: var(--text);
+            padding: 32px;
+        }
+
+        .wrap {
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, .72);
+            border: 1px solid rgba(226, 232, 240, .9);
+            backdrop-filter: blur(10px);
+            border-radius: 28px;
+            box-shadow: var(--shadow);
+            padding: 22px;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 10px 12px 18px;
+            border-bottom: 1px solid var(--line);
+            margin-bottom: 22px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .brand a {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .brand img {
+            height: 34px;
+            width: auto;
+            display: block;
+            object-fit: contain;
+        }
+
+        .title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .title .divider {
+            color: #cbd5e1;
+        }
+
+        .title h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -.02em;
+        }
+
+        .title .pair {
+            font-size: 30px;
+            font-weight: 800;
+            letter-spacing: -.03em;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border: 1px solid var(--line);
+            background: var(--chip);
+            border-radius: 999px;
+            color: #0f172a;
+            font-size: 14px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .chip.green {
+            background: rgba(20, 184, 122, .12);
+            color: #0f8d63;
+            border-color: rgba(20, 184, 122, .18)
+        }
+
+        .chip.blue {
+            background: rgba(37, 99, 235, .10);
+            color: #1d4ed8;
+            border-color: rgba(37, 99, 235, .14)
+        }
+
+        .chip.red {
+            background: rgba(239, 68, 68, .10);
+            color: #dc2626;
+            border-color: rgba(239, 68, 68, .14)
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1.8fr .95fr;
+            gap: 18px;
+        }
+
+        .left-col,
+        .right-col {
+            display: grid;
+            gap: 18px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 22px;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, .04);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 16px 18px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .card-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: -.02em;
+        }
+
+        .sub {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .hero {
+            overflow: hidden;
+        }
+
+        .hero-body {
+            padding: 0;
+        }
+
+        .chart-wrap {
+            position: relative;
+            padding: 18px 18px 8px;
+        }
+
+        .chart-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .tf {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tf span {
+            padding: 7px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .tf span.active {
+            background: #0f172a;
+            color: #fff;
+            border-color: #0f172a;
+        }
+
+        .hero-badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .hero-badges .pill {
+            padding: 7px 12px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 800;
+            border: 1px solid var(--line);
+            background: #fff;
+        }
+
+        .hero-badges .long {
+            color: #0f8d63;
+            background: rgba(20, 184, 122, .10);
+            border-color: rgba(20, 184, 122, .16);
+        }
+
+        .hero-badges .short {
+            color: #dc2626;
+            background: rgba(239, 68, 68, .10);
+            border-color: rgba(239, 68, 68, .14);
+        }
+
+        .hero-badges .conf {
+            color: #1d4ed8;
+            background: rgba(37, 99, 235, .08);
+            border-color: rgba(37, 99, 235, .14);
+        }
+
+        .chart-box {
+            position: relative;
+            height: 360px;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            overflow: hidden;
+            background:
+                linear-gradient(transparent 95%, rgba(148, 163, 184, .16) 95%) 0 0/100% 60px,
+                linear-gradient(90deg, transparent 95%, rgba(148, 163, 184, .16) 95%) 0 0/80px 100%,
+                linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+        }
+
+        .chart-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .watermark {
+            position: absolute;
+            right: 14px;
+            bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .88);
+            border: 1px solid rgba(226, 232, 240, .9);
+            box-shadow: 0 8px 20px rgba(15, 23, 42, .06);
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .watermark img {
+            height: 20px;
+            width: auto;
+            display: block;
+        }
+
+        .watermark span {
+            font-size: 12px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: .02em;
+        }
+
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            padding: 14px 18px 18px;
+        }
+
+        .metric {
+            padding: 14px 16px;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: #fff;
+        }
+
+        .metric .k {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            margin-bottom: 8px;
+        }
+
+        .metric .v {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -.03em;
+        }
+
+        .metric .s {
+            margin-top: 6px;
+            font-size: 13px;
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .section-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .data-list {
+            padding: 14px 18px 18px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .label {
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .value {
+            font-weight: 800;
+            color: #0f172a;
+            text-align: right;
+        }
+
+        .value.green {
+            color: #0f8d63
+        }
+
+        .value.red {
+            color: #dc2626
+        }
+
+        .value.amber {
+            color: #b45309
+        }
+
+        .value.blue {
+            color: #1d4ed8
+        }
+
+        .links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 18px;
+        }
+
+        .link-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: #fff;
+            color: #111827;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .footer-note {
+            padding: 0 18px 18px;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        @media (max-width: 1100px) {
+            .grid {
+                grid-template-columns: 1fr
+            }
+
+            .legend {
+                grid-template-columns: repeat(2, minmax(0, 1fr))
+            }
+        }
+
+        @media (max-width: 760px) {
+            body {
+                padding: 16px
+            }
+
+            .panel {
+                padding: 14px
+            }
+
+            .topbar {
+                padding: 8px 6px 14px
+            }
+
+            .title h1 {
+                font-size: 22px
+            }
+
+            .title .pair {
+                font-size: 24px
+            }
+
+            .section-grid {
+                grid-template-columns: 1fr
+            }
+
+            .legend {
+                grid-template-columns: 1fr
+            }
+
+            .brand img {
+                height: 28px
+            }
+
+            .chart-box {
+                height: 280px
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <section class="panel">
+            <header class="topbar">
+                <div class="brand">
+                    <a href="https://proptrex.com" target="_blank" rel="noopener noreferrer">
+                        <img alt="PROPTREX logo"
+                            src="data:image/png;base64,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" />
+                    </a>
+                    <div class="title">
+                        <h1 id="topCoinSymbol">MARKET PANEL</h1>
+                        <span class="divider">|</span>
+                        <div class="pair" id="topCoinMarket">Wait...</div>
+                    </div>
+                </div>
+
+                <div class="status">
+                    <span class="chip green" id="topPriceChange">--</span>
+                    <span class="chip blue" id="topDirection">--</span>
+                    <span class="chip" id="topScore">--</span>
+                </div>
+            </header>
+
+            <div class="grid">
+                <div class="left-col">
+                    <article class="card hero">
+                        <div class="hero-body">
+                            <div class="chart-wrap">
+                                <div class="chart-meta">
+                                    <div class="tf">
+                                        <span class="active">1m</span>
+                                        <span>15m</span>
+                                        <span>1H</span>
+                                        <span>4H</span>
+                                    </div>
+
+                                    <div class="hero-badges">
+                                        <span class="pill long" id="pillDirection">--</span>
+                                        <span class="pill conf" id="pillScore">--</span>
+                                    </div>
+                                </div>
+
+                                <div class="chart-box">
+                                    <svg class="chart-svg" viewBox="0 0 1000 420" preserveAspectRatio="none"
+                                        aria-hidden="true" id="miniChart">
+                                        <!-- Dynamic chart elements will go here -->
+                                    </svg>
+
+                                    <a class="watermark" href="https://proptrex.com" target="_blank"
+                                        rel="noopener noreferrer">
+                                        <img alt="PROPTREX logo"
+                                            src="data:image/png;base64,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" />
+                                        <span>proptrex.com</span>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="legend">
+                                <div class="metric">
+                                    <div class="k">Price</div>
+                                    <div class="v" id="lgPrice">--</div>
+                                    <div class="s">Live price</div>
+                                </div>
+                                <div class="metric">
+                                    <div class="k">Phase</div>
+                                    <div class="v" id="lgPhase">--</div>
+                                    <div class="s">Current state</div>
+                                </div>
+                                <div class="metric">
+                                    <div class="k">Signal</div>
+                                    <div class="v" id="lgSignal">--</div>
+                                    <div class="s" id="lgScore">--</div>
+                                </div>
+                                <div class="metric">
+                                    <div class="k">Confidence</div>
+                                    <div class="v" id="lgConf">--</div>
+                                    <div class="s">Composite engine score</div>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <div class="section-grid">
+                        <article class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Market Data</h2>
+                                <span class="sub">Core exchange feed</span>
+                            </div>
+                            <div class="data-list">
+                                <div class="row"><span class="label">1m Volume Multiplier</span><span class="value"
+                                        id="md_volx">--</span></div>
+                                <div class="row"><span class="label">Ask Sweep</span><span class="value"
+                                        id="md_ask">--</span></div>
+                                <div class="row"><span class="label">Bid Stack</span><span class="value"
+                                        id="md_bid">--</span></div>
+                                <div class="row"><span class="label">Spread</span><span class="value"
+                                        id="md_spread">--</span></div>
+                                <div class="row"><span class="label">Open Interest</span><span class="value"
+                                        id="md_oi">--</span></div>
+                            </div>
+                        </article>
+
+                        <article class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Positioning</h2>
+                                <span class="sub">Crowd structure</span>
+                            </div>
+                            <div class="data-list">
+                                <div class="row"><span class="label">1m % Change</span><span class="value"
+                                        id="pos_m1">--</span></div>
+                                <div class="row"><span class="label">3m % Change</span><span class="value"
+                                        id="pos_m3">--</span></div>
+                                <div class="row"><span class="label">5m % Change</span><span class="value"
+                                        id="pos_m5">--</span></div>
+                                <div class="row"><span class="label">Buy %</span><span class="value"
+                                        id="pos_buy">--</span></div>
+                                <div class="row"><span class="label">CVD</span><span class="value green"
+                                        id="pos_cvd">--</span></div>
+                            </div>
+                        </article>
+
+                        <article class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Social Intelligence</h2>
+                                <span class="sub">Narrative pressure</span>
+                            </div>
+                            <div class="data-list">
+                                <div class="row"><span class="label">Social Score</span><span class="value blue"
+                                        id="soc_score">--</span></div>
+                                <div class="row"><span class="label">Sentiment</span><span
+                                        class="value green">Bullish</span></div>
+                                <div class="row"><span class="label">X Buzz</span><span class="value">High</span></div>
+                                <div class="row"><span class="label">Telegram Buzz</span><span class="value">High</span>
+                                </div>
+                                <div class="row"><span class="label">Category</span><span class="value"
+                                        id="soc_cat">--</span></div>
+                            </div>
+                        </article>
+
+                        <article class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Trade Setup</h2>
+                                <span class="sub">Execution layer</span>
+                            </div>
+                            <div class="data-list">
+                                <div class="row"><span class="label">Entry Zone</span><span class="value"
+                                        id="ts_entry">--</span></div>
+                                <div class="row"><span class="label">TP / SL</span><span class="value"
+                                        id="ts_tp">--</span></div>
+                                <div class="row"><span class="label">Status</span><span class="value"
+                                        id="ts_status">--</span></div>
+                                <div class="row"><span class="label">Trigger</span><span class="value"
+                                        id="ts_trigger">--</span></div>
+                                <div class="row"><span class="label">Risk / Reward</span><span
+                                        class="value">1:2.4</span></div>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+
+                <div class="right-col">
+                    <article class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Market Structure</h2>
+                            <span class="sub">Technical state</span>
+                        </div>
+                        <div class="data-list">
+                            <div class="row"><span class="label">RSI(14)</span><span class="value green">61.8 •
+                                    Bullish</span></div>
+                            <div class="row"><span class="label">MACD</span><span class="value green">Positive
+                                    crossover</span></div>
+                            <div class="row"><span class="label">Histogram</span><span class="value">Expanding</span>
+                            </div>
+                            <div class="row"><span class="label">EMA 20 / 50</span><span class="value">Bullish
+                                    alignment</span></div>
+                            <div class="row"><span class="label">EMA 200</span><span class="value">Under price</span>
+                            </div>
+                            <div class="row"><span class="label">Fib Hold</span><span class="value">0.618
+                                    respected</span></div>
+                        </div>
+                    </article>
+
+                    <article class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Risk Status</h2>
+                            <span class="sub">Protection logic</span>
+                        </div>
+                        <div class="data-list">
+                            <div class="row"><span class="label">Invalidation</span><span class="value red">15m close
+                                    below SL</span></div>
+                            <div class="row"><span class="label">Risk Level</span><span
+                                    class="value amber">Medium</span></div>
+                            <div class="row"><span class="label">Leverage</span><span class="value">3x – 5x</span></div>
+                            <div class="row"><span class="label">Liq. Proximity</span><span
+                                    class="value green">Safe</span></div>
+                        </div>
+                    </article>
+
+                    <article class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Exchange Links</h2>
+                            <span class="sub">Source routing</span>
+                        </div>
+                        <div class="links" id="refLinks">
+                            <a class="link-btn" href="#" target="_blank" rel="noopener noreferrer">Binance</a>
+                        </div>
+                        <div class="footer-note" id="footerNote">
+                            Data feeds: Pending • Last sync: Loading
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const symbolParam = window.location.pathname.split("/").pop();
+
+        async function loadData() {
+            try {
+                const res = await fetch("/api/coin/" + symbolParam);
+                if (!res.ok) return;
+                const payload = await res.json();
+                const coin = payload.coin;
+                const config = payload.config;
+
+                document.title = coin.symbol.split(" ")[0] + " - PROPTREX Market Panel";
+                document.getElementById("topCoinSymbol").innerText = coin.symbol.split(" ")[0];
+                document.getElementById("topCoinMarket").innerText = coin.type === "PERP" ? "VADELİ İŞLEMLER" : "SPOT PİYASA";
+
+                document.getElementById("topPriceChange").innerText = coin.price;
+                document.getElementById("topDirection").innerText = coin.direction + " BIAS";
+                document.getElementById("topDirection").className = coin.direction === "LONG" ? "chip green" : "chip red";
+
+                document.getElementById("topScore").innerText = "Score " + coin.score;
+                document.getElementById("pillDirection").innerText = coin.direction;
+                document.getElementById("pillDirection").className = coin.direction === "LONG" ? "pill long" : "pill short";
+                document.getElementById("pillScore").innerText = "AI " + coin.score;
+
+                document.getElementById("lgPrice").innerText = "$" + coin.price;
+                document.getElementById("lgPhase").innerText = coin.phase;
+                document.getElementById("lgSignal").innerText = coin.direction;
+                document.getElementById("lgSignal").style.color = coin.direction === "LONG" ? "#0f8d63" : "#dc2626";
+                document.getElementById("lgConf").innerText = coin.score + "%";
+                document.getElementById("lgScore").innerText = "Score: " + coin.score;
+
+                document.getElementById("md_volx").innerText = coin.volx;
+                document.getElementById("md_ask").innerText = coin.ask_sweep;
+                document.getElementById("md_bid").innerText = coin.bid_stack;
+                document.getElementById("md_spread").innerText = coin.spread;
+                document.getElementById("md_oi").innerText = coin.oi_delta;
+
+                document.getElementById("pos_m1").innerText = coin.m1 + "%";
+                document.getElementById("pos_m3").innerText = coin.m3 + "%";
+                document.getElementById("pos_m5").innerText = coin.m5 + "%";
+                document.getElementById("pos_buy").innerText = coin.buy_pct + "%";
+                document.getElementById("pos_cvd").innerText = coin.cvd;
+                document.getElementById("pos_cvd").className = coin.cvd === "↑" ? "value green" : "value red";
+
+                document.getElementById("soc_score").innerText = coin.score + " / 100";
+                document.getElementById("soc_cat").innerText = coin.category;
+
+                document.getElementById("ts_entry").innerText = coin.entry_band;
+                document.getElementById("ts_tp").innerText = coin.tp_sl;
+                document.getElementById("ts_status").innerText = coin.status;
+                document.getElementById("ts_trigger").innerText = coin.trigger;
+
+                // Build ref links
+                let linksHtml = "";
+                let symClean = coin.symbol.split(" ")[0].replace("USDT", "");
+                if (config.ref_binance) linksHtml += '<a class="link-btn" href="' + config.ref_binance + '" target="_blank">Binance</a>';
+                if (config.ref_mexc) linksHtml += '<a class="link-btn" href="' + config.ref_mexc + '" target="_blank">MEXC</a>';
+                if (config.ref_gate) linksHtml += '<a class="link-btn" href="' + config.ref_gate + '" target="_blank">Gate.io</a>';
+
+                linksHtml += '<a class="link-btn" href="https://www.tradingview.com/symbols/' + symClean + 'USDT/" target="_blank">TradingView</a>';
+                if (config.promo_link) linksHtml += '<a class="link-btn" href="' + config.promo_link + '" target="_blank">Platform</a>';
+
+                document.getElementById("refLinks").innerHTML = linksHtml;
+                document.getElementById("footerNote").innerText = "Proptrex Algo • Loaded: " + coin.time;
+
+                // Render basic SVG chart simulating price action based on direction
+                let isLong = coin.direction === "LONG";
+                document.getElementById("miniChart").innerHTML = `
+              <!-- support/resistance -->
+              <line x1="40" y1="100" x2="960" y2="100" stroke="#ef4444" stroke-width="2"/>
+              <line x1="40" y1="260" x2="960" y2="260" stroke="#14b87a" stroke-width="2"/>
+              <!-- MACD -->
+              <path d="M40 ${isLong ? '390' : '350'} C250 ${isLong ? '380' : '360'}, 500 ${isLong ? '360' : '380'}, 960 ${isLong ? '350' : '390'}" fill="none" stroke="${isLong ? '#0ea5e9' : '#ef4444'}" stroke-width="2.5"/>
+              <path d="M40 280 C120 275, 180 268, 260 250 S430 215, 530 188 S735 165, 960 160" fill="none" stroke="#f59e0b" stroke-width="3"/>
+            `;
+
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // Refresh loop
+        loadData();
+        setInterval(loadData, 3000);
+    </script>
+</body>
+
+</html>

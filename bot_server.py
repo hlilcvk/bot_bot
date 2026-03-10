@@ -1,6 +1,7 @@
 import asyncio
 import time
 from datetime import datetime
+from collections import deque
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,6 +29,13 @@ CONFIG_FILE = "bot_config.json"
 
 market_state = {}
 
+# Fiyat geçmişi: Her coin için son 5 dakikalık fiyat kayıtları (m1/m3/m5 için)
+price_history = {}  # {sym_key: deque([(timestamp, price), ...], maxlen=300)}
+
+# Volume tracking: Anlık volume spike oranını doğru hesaplamak için
+volume_history = {}  # {sym_key: deque([(timestamp, cumulative_vol), ...], maxlen=120)}
+
+
 class ConnectionManager:
     def __init__(self):
         self.active_connections: list[WebSocket] = []
@@ -37,14 +45,15 @@ class ConnectionManager:
         self.active_connections.append(websocket)
 
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
 
     async def broadcast(self, message: dict):
-        for connection in self.active_connections:
+        for connection in list(self.active_connections):
             try:
                 await connection.send_json(message)
-            except:
-                pass
+            except Exception:
+                self.disconnect(connection)
 
 manager = ConnectionManager()
 
@@ -113,9 +122,9 @@ def send_twitter(config, message):
         return
     try:
         client = tweepy.Client(
-            consumer_key=config['tw_api_key'], 
-            consumer_secret=config['tw_api_secret'], 
-            access_token=config['tw_access_token'], 
+            consumer_key=config['tw_api_key'],
+            consumer_secret=config['tw_api_secret'],
+            access_token=config['tw_access_token'],
             access_token_secret=config['tw_access_secret']
         )
         client.create_tweet(text=message)
@@ -123,9 +132,9 @@ def send_twitter(config, message):
     except Exception as e:
         print(f"Twitter hatasi: {e}")
 
-def trigger_social_alerts(sym, price, m1, score, exchange="BIN", market_type="Futures", direction="LONG"):
+def trigger_social_alerts(sym, price, volx, score, exchange="BIN", market_type="Futures", direction="LONG"):
     config = load_config()
-    
+
     ref_link = ""
     exchange_name = ""
     if exchange == "BIN":
@@ -137,84 +146,144 @@ def trigger_social_alerts(sym, price, m1, score, exchange="BIN", market_type="Fu
     elif exchange == "GATE" or exchange == "GATEIO":
         ref_link = config.get('ref_gate', '')
         exchange_name = "Gate.io"
-        
+
     ref_links = f"\nTrade via our partner link:\n{exchange_name}: {ref_link}\n" if ref_link else ""
-
     promo_text = f"\n🤖 Register/Access Proptrex:\n👉 {config.get('promo_link', '')}\n" if config.get("promo_enabled") else ""
-
-    # Chart link
-    chart_link = f"📈 Live Chart: https://www.tradingview.com/chart/?symbol={exchange_name.upper()}:{sym}" if exchange_name != "" else f"📈 Live Chart: https://www.tradingview.com/chart/?symbol=BINANCE:{sym}"
-
-    # Direction icons
+    chart_link = f"📈 Live Chart & Analysis: {config.get('promo_link', 'https://proptrex.com.tr').rstrip('/')}/signal/{sym}"
     dir_icon = "🟢" if direction == "LONG" else "🔴"
-    
-    # 1 Adet net detaylı şablon
+
     templates = {
-        "T1": f"🚀 PROPTREX RADAR DETECTED! 🚀\n\n📌 Coin: #{sym}\n{dir_icon} Signal: {direction}\n📊 Market: {market_type}\n\n💲 Current Price: ${price:.4f}\n⚡️ Volume Burst: {m1:.1f}x\n🔥 AI Score: {score}/100\n\n🎯 Recommended TP1: ${price*1.03 if direction == 'LONG' else price*0.97:.3f}\n🛡 Manage Your Risk/Reward.\n\n{chart_link}\n" + promo_text + ref_links
+        "T1": f"🚀 PROPTREX RADAR DETECTED! 🚀\n\n📌 Coin: #{sym}\n{dir_icon} Signal: {direction}\n📊 Market: {market_type}\n\n💲 Current Price: ${price:.4f}\n⚡️ Volume Burst: {volx:.1f}x\n🔥 AI Score: {score}/100\n\n🎯 Recommended TP1: ${price*1.03 if direction == 'LONG' else price*0.97:.3f}\n🛡 Manage Your Risk/Reward.\n\n{chart_link}\n" + promo_text + ref_links
     }
-    
-    price_tp = price * 1.03 if direction == "LONG" else price * 0.97
-    price_low = price * 0.99 if direction == "LONG" else price * 1.01
-    price_high = price * 1.01 if direction == "LONG" else price * 0.99
-    
+
     if config.get("tg_enabled"):
-        msg_tg = templates["T1"]
-        send_telegram(config, msg_tg)
-        
+        send_telegram(config, templates["T1"])
     if config.get("tw_enabled"):
-        msg_tw = templates["T1"]
-        send_twitter(config, msg_tw)
+        send_twitter(config, templates["T1"])
+
+
+# ── Yardımcı: Geçmiş fiyatı bul ──
+def get_historical_price(sym_key, seconds_ago):
+    """Belirtilen saniye önceki fiyatı price_history'den bulur"""
+    if sym_key not in price_history or len(price_history[sym_key]) == 0:
+        return None
+    now = time.time()
+    target_time = now - seconds_ago
+    closest = None
+    for ts, px in price_history[sym_key]:
+        if ts <= target_time:
+            closest = px
+    return closest
+
+
+# ── Yardımcı: Volume spike oranı (coin bazlı normalize) ──
+def calc_volume_rate(sym_key, current_vol):
+    """
+    Anlık volume hızını ortalama hıza bölerek spike oranı hesaplar.
+    Binance q alanı 24h kümülatif → farkı zamana bölerek $/sn hızı buluruz.
+    BTC'de $50K normal, altcoin'de devasa → bu fonksiyon her coin'i kendi bazında ölçer.
+    """
+    if sym_key not in volume_history:
+        volume_history[sym_key] = deque(maxlen=120)
+
+    now = time.time()
+    volume_history[sym_key].append((now, current_vol))
+
+    hist = volume_history[sym_key]
+    if len(hist) < 5:
+        return 1.0
+
+    # Son 5 saniyelik volume hızı (anlık)
+    recent = [(t, v) for t, v in hist if now - t <= 5]
+    if len(recent) < 2:
+        return 1.0
+    recent_rate = (recent[-1][1] - recent[0][1]) / max(0.1, recent[-1][0] - recent[0][0])
+
+    # Son 60 saniyelik ortalama volume hızı (baseline)
+    baseline = [(t, v) for t, v in hist if now - t <= 60]
+    if len(baseline) < 2:
+        return 1.0
+    baseline_rate = (baseline[-1][1] - baseline[0][1]) / max(0.1, baseline[-1][0] - baseline[0][0])
+
+    if baseline_rate <= 0:
+        return 1.0
+
+    return max(1.0, recent_rate / baseline_rate)
+
 
 def process_ticker(ticker_data, market_type="Futures"):
     sym = ticker_data['s']
-    if not sym.endswith("USDT"): return None
-    
+    if not sym.endswith("USDT"):
+        return None
+
     unique_sym_key = f"{market_type}_{sym}"
-    
+
     price = float(ticker_data['c'])
     vol_quote = float(ticker_data['q'])
     price_change_pct = float(ticker_data['P'])
     now = time.time()
-    
+
+    # Fiyat geçmişine kaydet (m1/m3/m5 için)
+    if unique_sym_key not in price_history:
+        price_history[unique_sym_key] = deque(maxlen=300)
+    price_history[unique_sym_key].append((now, price))
+
     if unique_sym_key not in market_state:
-        market_state[unique_sym_key] = {"last_price": price, "last_vol": vol_quote, "last_time": now, "pump_score": 0, "phase": "Squeeze", "category": "PRE-PUMP CANDIDATES", "last_alert_time": 0, "m1_price": price, "m3_price": price, "m5_price": price}
+        market_state[unique_sym_key] = {
+            "last_price": price,
+            "last_vol": vol_quote,
+            "last_time": now,
+            "pump_score": 0,
+            "phase": "Squeeze",
+            "category": "PRE-PUMP CANDIDATES",
+            "last_alert_time": 0,
+            "direction": "LONG",
+        }
         return None
-        
+
     prev = market_state[unique_sym_key]
     time_diff = now - prev["last_time"]
-    if time_diff < 1.0: return None
-        
-    vol_diff = vol_quote - prev["last_vol"]
+    if time_diff < 1.0:
+        return None
+
+    # Volume spike oranı — coin bazlı normalize
+    volx = calc_volume_rate(unique_sym_key, vol_quote)
+
     price_diff_pct = ((price - prev["last_price"]) / prev["last_price"]) * 100 if prev["last_price"] > 0 else 0
-    
+
+    # Score hesaplama — normalize volume spike ile
     score_increase = 0
-    volx = 1.0
-    if vol_diff > 50000:
-        volx = 1.5
+    if volx >= 2.0:
         score_increase += 5
-    if vol_diff > 150000:
-        volx = 2.5
+    if volx >= 3.5:
+        score_increase += 10
+    if volx >= 5.0:
         score_increase += 15
-    if vol_diff > 300000:
-        volx = 4.0
-        score_increase += 25
-        
+    if volx >= 8.0:
+        score_increase += 15
+
     abs_price_diff = abs(price_diff_pct)
-    if abs_price_diff > 0.1: score_increase += 5
-    if abs_price_diff > 0.4: score_increase += 15
-    
-    direction = "SHORT" if price_diff_pct >= 0 else "LONG"
-        
+    if abs_price_diff > 0.1:
+        score_increase += 5
+    if abs_price_diff > 0.3:
+        score_increase += 10
+    if abs_price_diff > 0.7:
+        score_increase += 10
+
+    # FIX: Direction — fiyat yükseliyorsa LONG, düşüyorsa SHORT
+    direction = "LONG" if price_diff_pct >= 0 else "SHORT"
+
     current_score = prev["pump_score"]
+    # Score decay: saniyede 2.0 puan (eskisi 0.5 idi, çok yavaştı)
     if score_increase == 0:
-        current_score = max(0, current_score - (time_diff * 0.5))
+        current_score = max(0, current_score - (time_diff * 2.0))
     else:
         current_score = min(100, current_score + score_increase)
-        
+
     cat = "PRE-PUMP CANDIDATES"
     status = "Watching"
     phase = "Squeeze"
-    
+
     if current_score >= 85:
         cat = "TRIGGERED NOW"
         status = "Alert"
@@ -232,36 +301,66 @@ def process_ticker(ticker_data, market_type="Futures"):
         status = "Watching"
         phase = "Squeeze"
 
-    market_state[unique_sym_key].update({"last_price": price, "last_vol": vol_quote, "last_time": now, "pump_score": current_score, "phase": phase, "category": cat})
-    
-    if score_increase == 0 and current_score < 50: return None
-    
-    # Simulate historical prices if missing
-    m1_pct = ((price - prev.get("m1_price", price)) / prev.get("m1_price", price)) * 100 if prev.get("m1_price", price) > 0 else 0
-    m3_pct = ((price - prev.get("m3_price", price)) / prev.get("m3_price", price)) * 100 if prev.get("m3_price", price) > 0 else 0
-    m5_pct = ((price - prev.get("m5_price", price)) / prev.get("m5_price", price)) * 100 if prev.get("m5_price", price) > 0 else 0
-        
+    market_state[unique_sym_key].update({
+        "last_price": price,
+        "last_vol": vol_quote,
+        "last_time": now,
+        "pump_score": current_score,
+        "phase": phase,
+        "category": cat,
+        "direction": direction,
+    })
+
+    if score_increase == 0 and current_score < 50:
+        return None
+
+    # m1/m3/m5 gerçek fiyat geçmişinden
+    m1_price = get_historical_price(unique_sym_key, 60)
+    m3_price = get_historical_price(unique_sym_key, 180)
+    m5_price = get_historical_price(unique_sym_key, 300)
+    m1_pct = ((price - m1_price) / m1_price) * 100 if m1_price and m1_price > 0 else 0
+    m3_pct = ((price - m3_price) / m3_price) * 100 if m3_price and m3_price > 0 else 0
+    m5_pct = ((price - m5_price) / m5_price) * 100 if m5_price and m5_price > 0 else 0
+
     tp1 = price * 1.03 if direction == "LONG" else price * 0.97
     buy_pct_calc = 75 if direction == "LONG" else 25
 
     item = {
-        "symbol": f"{sym} ({'SPOT' if 'Spot' in market_type else 'PERP'})", "exchange": "BIN", "type": "SPOT" if "Spot" in market_type else "PERP", "score": int(current_score), "direction": direction,
-        "phase": phase, "price": f"{price:.4f}", "m1": f"{m1_pct:+.1f}", "m3": f"{m3_pct:+.1f}",
-        "m5": f"{m5_pct:+.1f}", "volx": f"{volx:.1f}x", "buy_pct": buy_pct_calc, "obi": "1.50", "cvd": "↑" if direction == "LONG" else "↓",
-        "spread": "Tight" if volx > 2.0 else "Stable", "ask_sweep": "Sweeping" if direction == "LONG" else "Pressuring", "bid_stack": "Strong" if direction == "LONG" else "Weak", "oi_delta": f"{price_change_pct:+.1f}%",
-        "trigger": "Volume Burst" if volx > 2.0 else "Micro BO",
+        "symbol": f"{sym} ({'SPOT' if 'Spot' in market_type else 'PERP'})",
+        "exchange": "BIN",
+        "type": "SPOT" if "Spot" in market_type else "PERP",
+        "score": int(current_score),
+        "direction": direction,
+        "phase": phase,
+        "price": f"{price:.4f}",
+        "m1": f"{m1_pct:+.1f}",
+        "m3": f"{m3_pct:+.1f}",
+        "m5": f"{m5_pct:+.1f}",
+        "volx": f"{volx:.1f}x",
+        "buy_pct": buy_pct_calc,
+        "obi": "—",
+        "cvd": "↑" if direction == "LONG" else "↓",
+        "spread": "—",
+        "ask_sweep": "—",
+        "bid_stack": "—",
+        "oi_delta": f"{price_change_pct:+.1f}%",
+        "trigger": f"Vol {volx:.1f}x" if volx >= 3.0 else ("Price Move" if abs_price_diff > 0.3 else "Building"),
         "entry_band": f"{price*0.99:.3f}-{price*1.01:.3f}" if cat != "ACTIVE RUN" else "Trail Active",
         "tp_sl": f"TP1 {tp1:.3f} / SL" if cat in ["PRE-PUMP CANDIDATES", "TRIGGERED NOW"] else ("TP2 open" if cat == "ACTIVE RUN" else "TP hit / exit"),
         "status": status,
-        "time": datetime.now().strftime("%H:%M:%S"), "category": cat
+        "time": datetime.now().strftime("%H:%M:%S"),
+        "category": cat,
     }
-    
+
     if cat == "TRIGGERED NOW" and current_score > 88:
         if now - prev["last_alert_time"] > 300:
             market_state[unique_sym_key]["last_alert_time"] = now
             trigger_social_alerts(sym, price, volx, int(current_score), "BIN", market_type, direction)
-            
+
     return item
+
+
+# ── Sayfa Endpoint'leri ──
 
 @app.get("/")
 async def get_index():
@@ -271,6 +370,76 @@ async def get_index():
 async def get_platform():
     return FileResponse("platform.html")
 
+@app.get("/signal/{symbol}")
+async def get_signal_panel(symbol: str):
+    return FileResponse("coin_panel.html")
+
+
+# ── Coin API Endpoint ──
+
+@app.get("/api/coin/{symbol}")
+async def get_coin_data(symbol: str):
+    symbol = symbol.upper()
+    config = load_config()
+    items = []
+
+    # FIX: Doğru market type key'leri (eskisi "Vadeli İşlemler (Futures)" hiç eşleşmiyordu)
+    for market_type in ["Futures", "Spot Market"]:
+        key = f"{market_type}_{symbol}"
+        if key in market_state:
+            state = market_state[key]
+            price = state["last_price"]
+            cat = state["category"]
+            phase = state["phase"]
+            current_score = state["pump_score"]
+            is_spot = "Spot" in key
+            direction = state.get("direction", "LONG")
+
+            # Gerçek m1/m3/m5
+            m1_price = get_historical_price(key, 60)
+            m3_price = get_historical_price(key, 180)
+            m5_price = get_historical_price(key, 300)
+            m1_pct = ((price - m1_price) / m1_price) * 100 if m1_price and m1_price > 0 else 0
+            m3_pct = ((price - m3_price) / m3_price) * 100 if m3_price and m3_price > 0 else 0
+            m5_pct = ((price - m5_price) / m5_price) * 100 if m5_price and m5_price > 0 else 0
+
+            tp1 = price * 1.03 if direction == "LONG" else price * 0.97
+
+            items.append({
+                "symbol": f"{symbol} ({'SPOT' if is_spot else 'PERP'})",
+                "exchange": "BIN",
+                "type": "SPOT" if is_spot else "PERP",
+                "direction": direction,
+                "score": int(current_score),
+                "phase": phase,
+                "price": f"{price:.4f}",
+                "m1": f"{m1_pct:+.1f}",
+                "m3": f"{m3_pct:+.1f}",
+                "m5": f"{m5_pct:+.1f}",
+                "volx": "—",
+                "buy_pct": 75 if direction == "LONG" else 25,
+                "obi": "—",
+                "cvd": "↑" if direction == "LONG" else "↓",
+                "spread": "—",
+                "ask_sweep": "—",
+                "bid_stack": "—",
+                "oi_delta": "—",
+                "trigger": "—",
+                "entry_band": f"{price*0.99:.3f}-{price*1.01:.3f}",
+                "tp_sl": f"TP1 {tp1:.3f}",
+                "status": phase,
+                "time": datetime.now().strftime("%H:%M:%S"),
+                "category": cat,
+            })
+
+    if not items:
+        return {"coin": None, "config": config, "error": "Coin verisi henüz yok, scanner başladıktan sonra tekrar deneyin."}
+
+    return {"coin": items[0], "config": config}
+
+
+# ── Snapshot Endpoint ──
+
 @app.get("/snapshot")
 async def get_snapshot():
     items = []
@@ -278,21 +447,51 @@ async def get_snapshot():
         if state["pump_score"] > 20:
             price = state["last_price"]
             cat = state["category"]
-            status = state["phase"]
+            phase = state["phase"]
             current_score = state["pump_score"]
             is_spot = "Spot" in unique_sym_key
             sym_display = unique_sym_key.split("_")[1]
-            
+            direction = state.get("direction", "LONG")
+
+            m1_price = get_historical_price(unique_sym_key, 60)
+            m3_price = get_historical_price(unique_sym_key, 180)
+            m5_price = get_historical_price(unique_sym_key, 300)
+            m1_pct = ((price - m1_price) / m1_price) * 100 if m1_price and m1_price > 0 else 0
+            m3_pct = ((price - m3_price) / m3_price) * 100 if m3_price and m3_price > 0 else 0
+            m5_pct = ((price - m5_price) / m5_price) * 100 if m5_price and m5_price > 0 else 0
+
+            tp1 = price * 1.03 if direction == "LONG" else price * 0.97
+
             items.append({
-                "symbol": f"{sym_display} ({'SPOT' if is_spot else 'PERP'})", "exchange": "BIN", "direction": "LONG", "score": int(current_score),
-                "phase": status, "price": f"{price:.4f}", "m1": "1.0", "m3": "1.5", "m5": "2.0",
-                "volx": "1.5x", "buy_pct": 75, "obi": "1.50", "cvd": "↑", "spread": "Stable",
-                "ask_sweep": "-", "bid_stack": "-", "oi_delta": "-", "trigger": "-",
-                "entry_band": f"{price*0.99:.3f}-{price*1.01:.3f}", "tp_sl": f"TP1 {price*1.03:.3f}",
-                "status": status, "time": datetime.now().strftime("%H:%M:%S"), "category": cat
+                "symbol": f"{sym_display} ({'SPOT' if is_spot else 'PERP'})",
+                "exchange": "BIN",
+                "direction": direction,
+                "score": int(current_score),
+                "phase": phase,
+                "price": f"{price:.4f}",
+                "m1": f"{m1_pct:+.1f}",
+                "m3": f"{m3_pct:+.1f}",
+                "m5": f"{m5_pct:+.1f}",
+                "volx": "—",
+                "buy_pct": 75 if direction == "LONG" else 25,
+                "obi": "—",
+                "cvd": "↑" if direction == "LONG" else "↓",
+                "spread": "—",
+                "ask_sweep": "—",
+                "bid_stack": "—",
+                "oi_delta": "—",
+                "trigger": "—",
+                "entry_band": f"{price*0.99:.3f}-{price*1.01:.3f}",
+                "tp_sl": f"TP1 {tp1:.3f}",
+                "status": phase,
+                "time": datetime.now().strftime("%H:%M:%S"),
+                "category": cat,
             })
     items = sorted(items, key=lambda x: x["score"], reverse=True)
     return {"items": items[:15], "count": len(items[:15])}
+
+
+# ── WebSocket ──
 
 @app.websocket("/ws/events")
 async def ws_events(websocket: WebSocket):
