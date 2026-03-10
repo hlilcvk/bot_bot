@@ -276,6 +276,13 @@
                 <input type="text" id="ref_gate" name="ref_gate" placeholder="https://www.gate.io/...">
             </div>
 
+            <h2 style="margin-top: 35px;">Platform Adresi (Sinyal Panelleri İçin)</h2>
+            <div class="form-group">
+                <label for="platform_url">Sinyal grafikleri için bu botun çalıştığı ana URL (Örn:
+                    https://panel.proptrex.com.tr)</label>
+                <input type="text" id="platform_url" name="platform_url" placeholder="https://panel.proptrex.com.tr">
+            </div>
+
             <h2 style="margin-top: 35px;">Ön Kayıt / Yönlendirme Linki (Tüm Mesajların Altına Eklenir)</h2>
             <div class="form-group">
                 <label for="promo_link">Yönlendirme Linki (Örn: https://proptrex.com.tr)</label>
@@ -316,6 +323,7 @@
                     document.getElementById('ref_mexc').value = data.ref_mexc || "";
                     document.getElementById('ref_gate').value = data.ref_gate || "";
 
+                    document.getElementById('platform_url').value = data.platform_url || "";
                     document.getElementById('promo_link').value = data.promo_link || "";
                     document.getElementById('promo_enabled').checked = data.promo_enabled !== undefined ? data.promo_enabled : true;
                 }
@@ -368,6 +376,7 @@
                 ref_binance: document.getElementById('ref_binance').value,
                 ref_mexc: document.getElementById('ref_mexc').value,
                 ref_gate: document.getElementById('ref_gate').value,
+                platform_url: document.getElementById('platform_url').value,
                 promo_link: document.getElementById('promo_link').value,
                 promo_enabled: document.getElementById('promo_enabled').checked
             };

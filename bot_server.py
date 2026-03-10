@@ -149,7 +149,10 @@ def trigger_social_alerts(sym, price, volx, score, exchange="BIN", market_type="
 
     ref_links = f"\nTrade via our partner link:\n{exchange_name}: {ref_link}\n" if ref_link else ""
     promo_text = f"\n🤖 Register/Access Proptrex:\n👉 {config.get('promo_link', '')}\n" if config.get("promo_enabled") else ""
-    chart_link = f"📈 Live Chart & Analysis: {config.get('promo_link', 'https://proptrex.com.tr').rstrip('/')}/signal/{sym}"
+    
+    platform_url = config.get('platform_url') or 'https://proptrex.com.tr'
+    chart_link = f"📈 Live Chart & Analysis: {platform_url.rstrip('/')}/signal/{sym}"
+    
     dir_icon = "🟢" if direction == "LONG" else "🔴"
 
     templates = {
