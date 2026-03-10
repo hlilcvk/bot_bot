@@ -72,6 +72,7 @@ class BotConfig(BaseModel):
     ref_binance: str = "https://www.binance.com/activity/referral-entry/CPA?ref=CPA_00WPSCQYZA&utm_source=electron"
     ref_mexc: str = "https://promote.mexc.fm/r/KVaJdo8ook"
     ref_gate: str = "https://app.mbm06.com/referral/earn-together/invite/U1dNV1pe?ref=U1dNV1pe&ref_type=103&utm_cmp=rXJBDjtJ&activity_id=1772462196891"
+    platform_url: str = "https://panel.proptrex.com.tr"
     promo_link: str = "https://proptrex.com.tr"
     promo_enabled: bool = True
 
