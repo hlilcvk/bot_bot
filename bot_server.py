@@ -151,8 +151,8 @@ def trigger_social_alerts(sym, price, volx, score, exchange="BIN", market_type="
     ref_links = f"\nTrade via our partner link:\n{exchange_name}: {ref_link}\n" if ref_link else ""
     promo_text = f"\n🤖 Register/Access Proptrex:\n👉 {config.get('promo_link', '')}\n" if config.get("promo_enabled") else ""
     
-    platform_url = config.get('platform_url') or 'https://proptrex.com.tr'
-    chart_link = f"📈 Live Chart & Analysis: {platform_url.rstrip('/')}/signal/{sym}"
+    sym_clean = sym.replace("USDT", "").strip()
+    chart_link = f"📈 View on TradingView: https://www.tradingview.com/symbols/{sym_clean}USDT/"
     
     dir_icon = "🟢" if direction == "LONG" else "🔴"
 
@@ -376,7 +376,116 @@ async def get_platform():
 
 @app.get("/signal/{symbol}")
 async def get_signal_panel(symbol: str):
-    return FileResponse("coin_panel.html")
+    sym_clean = symbol.upper().replace("USDT", "")
+    tv_symbol = f"BINANCE:{sym_clean}USDT.P"
+    config = load_config()
+    platform_url = config.get("platform_url", "https://panel.proptrex.com.tr")
+    promo_link = config.get("promo_link", "https://proptrex.com.tr")
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>{sym_clean}USDT — PROPTREX Signal</title>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{background:#0b0e11;color:#eaecef;font-family:'Inter',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column}}
+.topbar{{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:#1e2329;border-bottom:1px solid #2b3139}}
+.topbar .brand{{display:flex;align-items:center;gap:10px}}
+.topbar .brand span{{font-weight:800;font-size:15px;color:#f0b90b;letter-spacing:1px}}
+.topbar .brand small{{font-size:10px;color:#848e9c;letter-spacing:2px}}
+.topbar .links{{display:flex;gap:12px}}
+.topbar .links a{{color:#848e9c;text-decoration:none;font-size:12px;font-weight:600;padding:6px 14px;border-radius:6px;transition:.2s}}
+.topbar .links a:hover{{color:#eaecef;background:rgba(240,185,11,.1)}}
+.topbar .links a.primary{{background:#f0b90b;color:#1e2329;border-radius:6px}}
+.topbar .links a.primary:hover{{background:#d4a50a}}
+.sym-bar{{display:flex;align-items:center;gap:16px;padding:12px 20px;background:#16191e;border-bottom:1px solid #2b3139;flex-wrap:wrap}}
+.sym-bar .coin{{font-size:20px;font-weight:800;color:#f0b90b}}
+.sym-bar .badge{{font-size:11px;padding:3px 10px;border-radius:10px;font-weight:600}}
+.sym-bar .badge.long{{background:rgba(14,203,129,.15);color:#0ecb81}}
+.sym-bar .badge.short{{background:rgba(246,70,93,.15);color:#f6465d}}
+.sym-bar .meta{{font-size:11px;color:#848e9c}}
+.chart-wrap{{flex:1;min-height:0}}
+.chart-wrap iframe{{width:100%;height:100%;border:none}}
+.bottom-bar{{display:flex;align-items:center;justify-content:center;gap:20px;padding:10px 20px;background:#1e2329;border-top:1px solid #2b3139;flex-wrap:wrap}}
+.bottom-bar a{{color:#f0b90b;text-decoration:none;font-size:12px;font-weight:600}}
+.bottom-bar span{{color:#848e9c;font-size:11px}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <span>PROPTREX</span>
+    <small>SIGNAL INTELLIGENCE</small>
+  </div>
+  <div class="links">
+    <a href="{platform_url}" target="_blank">Live Scanner</a>
+    <a href="{promo_link}" target="_blank" class="primary">Register</a>
+  </div>
+</div>
+
+<div class="sym-bar">
+  <span class="coin">{sym_clean}USDT</span>
+  <span class="badge" id="dirBadge">—</span>
+  <span class="meta" id="metaInfo">Loading signal data...</span>
+</div>
+
+<div class="chart-wrap">
+  <!-- TradingView Advanced Chart Widget -->
+  <div id="tv_chart" style="width:100%;height:100%"></div>
+  <script src="https://s3.tradingview.com/tv.js"></script>
+  <script>
+  new TradingView.widget({{
+    "autosize": true,
+    "symbol": "{tv_symbol}",
+    "interval": "5",
+    "timezone": "Europe/Istanbul",
+    "theme": "dark",
+    "style": "1",
+    "locale": "en",
+    "toolbar_bg": "#1e2329",
+    "enable_publishing": false,
+    "hide_top_toolbar": false,
+    "hide_legend": false,
+    "save_image": false,
+    "container_id": "tv_chart",
+    "studies": ["RSI@tv-basicstudies","MACD@tv-basicstudies","Volume@tv-basicstudies"],
+    "show_popup_button": true,
+    "popup_width": "1000",
+    "popup_height": "650"
+  }});
+  </script>
+</div>
+
+<div class="bottom-bar">
+  <span>Powered by PROPTREX AI Signal Engine</span>
+  <a href="{platform_url}" target="_blank">Open Full Platform →</a>
+</div>
+
+<script>
+(async()=>{{
+  try{{
+    const r=await fetch('/api/coin/{symbol.upper()}');
+    const d=await r.json();
+    if(d.coin){{
+      const c=d.coin;
+      const db=document.getElementById('dirBadge');
+      db.textContent=c.direction;
+      db.className='badge '+(c.direction==='LONG'?'long':'short');
+      document.getElementById('metaInfo').textContent=
+        'Score: '+c.score+'/100 | Phase: '+c.phase+' | Price: $'+c.price+' | m1: '+c.m1+'% | m5: '+c.m5+'%';
+    }}
+  }}catch(e){{console.warn(e)}}
+}})();
+</script>
+
+</body>
+</html>"""
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(content=html)
 
 
 # ── Coin API Endpoint ──
