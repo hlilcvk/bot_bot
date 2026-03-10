@@ -123,7 +123,7 @@ def send_twitter(config, message):
     except Exception as e:
         print(f"Twitter hatasi: {e}")
 
-def trigger_social_alerts(sym, price, m1, score, exchange="BIN", market_type="Vadeli İşlemler (Futures)", direction="LONG"):
+def trigger_social_alerts(sym, price, m1, score, exchange="BIN", market_type="Futures", direction="LONG"):
     config = load_config()
     
     ref_link = ""
@@ -138,16 +138,19 @@ def trigger_social_alerts(sym, price, m1, score, exchange="BIN", market_type="Va
         ref_link = config.get('ref_gate', '')
         exchange_name = "Gate.io"
         
-    ref_links = f"\nİşlem yapmak için referansımız:\n{exchange_name}: {ref_link}\n" if ref_link else ""
+    ref_links = f"\nTrade via our partner link:\n{exchange_name}: {ref_link}\n" if ref_link else ""
 
-    promo_text = f"\n🤖 Proptrex'e Kayıt/Erişim İçin:\n👉 {config.get('promo_link', '')}\n" if config.get("promo_enabled") else ""
+    promo_text = f"\n🤖 Register/Access Proptrex:\n👉 {config.get('promo_link', '')}\n" if config.get("promo_enabled") else ""
 
-    # Yön ikonları
+    # Chart link
+    chart_link = f"📈 Live Chart: https://www.tradingview.com/chart/?symbol={exchange_name.upper()}:{sym}" if exchange_name != "" else f"📈 Live Chart: https://www.tradingview.com/chart/?symbol=BINANCE:{sym}"
+
+    # Direction icons
     dir_icon = "🟢" if direction == "LONG" else "🔴"
     
     # 1 Adet net detaylı şablon
     templates = {
-        "T1": f"🚀 PROPTREX RADAR YAKALADI! 🚀\n\n📌 Coin: #{sym}\n{dir_icon} Yön: {direction}\n📊 Piyasa: {market_type}\n\n💲 Anlık Fiyat: ${price:.4f}\n⚡️ Hacim Patlaması: {m1:.1f}x\n🔥 AI Onay Skoru: {score}/100\n\n🎯 Tavsiye Edilen TP1: ${price*1.03 if direction == 'LONG' else price*0.97:.3f}\n🛡 Risk/Ödül Oranınıza Dikkat Edin.\n" + promo_text + ref_links
+        "T1": f"🚀 PROPTREX RADAR DETECTED! 🚀\n\n📌 Coin: #{sym}\n{dir_icon} Signal: {direction}\n📊 Market: {market_type}\n\n💲 Current Price: ${price:.4f}\n⚡️ Volume Burst: {m1:.1f}x\n🔥 AI Score: {score}/100\n\n🎯 Recommended TP1: ${price*1.03 if direction == 'LONG' else price*0.97:.3f}\n🛡 Manage Your Risk/Reward.\n\n{chart_link}\n" + promo_text + ref_links
     }
     
     price_tp = price * 1.03 if direction == "LONG" else price * 0.97
@@ -162,7 +165,7 @@ def trigger_social_alerts(sym, price, m1, score, exchange="BIN", market_type="Va
         msg_tw = templates["T1"]
         send_twitter(config, msg_tw)
 
-def process_ticker(ticker_data, market_type="Vadeli İşlemler (Futures)"):
+def process_ticker(ticker_data, market_type="Futures"):
     sym = ticker_data['s']
     if not sym.endswith("USDT"): return None
     
@@ -174,7 +177,7 @@ def process_ticker(ticker_data, market_type="Vadeli İşlemler (Futures)"):
     now = time.time()
     
     if unique_sym_key not in market_state:
-        market_state[unique_sym_key] = {"last_price": price, "last_vol": vol_quote, "last_time": now, "pump_score": 0, "phase": "Sıkışma", "category": "PRE-PUMP CANDIDATES", "last_alert_time": 0, "m1_price": price, "m3_price": price, "m5_price": price}
+        market_state[unique_sym_key] = {"last_price": price, "last_vol": vol_quote, "last_time": now, "pump_score": 0, "phase": "Squeeze", "category": "PRE-PUMP CANDIDATES", "last_alert_time": 0, "m1_price": price, "m3_price": price, "m5_price": price}
         return None
         
     prev = market_state[unique_sym_key]
@@ -200,7 +203,7 @@ def process_ticker(ticker_data, market_type="Vadeli İşlemler (Futures)"):
     if abs_price_diff > 0.1: score_increase += 5
     if abs_price_diff > 0.4: score_increase += 15
     
-    direction = "LONG" if price_diff_pct >= 0 else "SHORT"
+    direction = "SHORT" if price_diff_pct >= 0 else "LONG"
         
     current_score = prev["pump_score"]
     if score_increase == 0:
@@ -209,25 +212,25 @@ def process_ticker(ticker_data, market_type="Vadeli İşlemler (Futures)"):
         current_score = min(100, current_score + score_increase)
         
     cat = "PRE-PUMP CANDIDATES"
-    status = "İzleme"
-    phase = "Sıkışma"
+    status = "Watching"
+    phase = "Squeeze"
     
     if current_score >= 85:
         cat = "TRIGGERED NOW"
-        status = "Alarm"
+        status = "Alert"
         phase = "Trigger"
     elif current_score > 60:
         cat = "ACTIVE RUN"
-        status = "Onay"
-        phase = "Devam"
+        status = "Confirmed"
+        phase = "Running"
     elif current_score < 40 and prev["pump_score"] > 60:
         cat = "EXHAUSTION / EXIT"
         status = "Exit"
-        phase = "Yorulma"
+        phase = "Exhausted"
     elif current_score < 50:
         cat = "PRE-PUMP CANDIDATES"
-        status = "İzleme"
-        phase = "Sıkışma"
+        status = "Watching"
+        phase = "Squeeze"
 
     market_state[unique_sym_key].update({"last_price": price, "last_vol": vol_quote, "last_time": now, "pump_score": current_score, "phase": phase, "category": cat})
     
@@ -245,10 +248,10 @@ def process_ticker(ticker_data, market_type="Vadeli İşlemler (Futures)"):
         "symbol": f"{sym} ({'SPOT' if 'Spot' in market_type else 'PERP'})", "exchange": "BIN", "type": "SPOT" if "Spot" in market_type else "PERP", "score": int(current_score), "direction": direction,
         "phase": phase, "price": f"{price:.4f}", "m1": f"{m1_pct:+.1f}", "m3": f"{m3_pct:+.1f}",
         "m5": f"{m5_pct:+.1f}", "volx": f"{volx:.1f}x", "buy_pct": buy_pct_calc, "obi": "1.50", "cvd": "↑" if direction == "LONG" else "↓",
-        "spread": "Daraldı" if volx > 2.0 else "Stabil", "ask_sweep": "Süpürüyor" if direction == "LONG" else "Baskılıyor", "bid_stack": "Güçlü" if direction == "LONG" else "Zayıf", "oi_delta": f"{price_change_pct:+.1f}%",
+        "spread": "Tight" if volx > 2.0 else "Stable", "ask_sweep": "Sweeping" if direction == "LONG" else "Pressuring", "bid_stack": "Strong" if direction == "LONG" else "Weak", "oi_delta": f"{price_change_pct:+.1f}%",
         "trigger": "Volume Burst" if volx > 2.0 else "Micro BO",
         "entry_band": f"{price*0.99:.3f}-{price*1.01:.3f}" if cat != "ACTIVE RUN" else "Trail Active",
-        "tp_sl": f"TP1 {tp1:.3f} / SL" if cat in ["PRE-PUMP CANDIDATES", "TRIGGERED NOW"] else ("TP2 açık" if cat == "ACTIVE RUN" else "TP hit / exit"),
+        "tp_sl": f"TP1 {tp1:.3f} / SL" if cat in ["PRE-PUMP CANDIDATES", "TRIGGERED NOW"] else ("TP2 open" if cat == "ACTIVE RUN" else "TP hit / exit"),
         "status": status,
         "time": datetime.now().strftime("%H:%M:%S"), "category": cat
     }
@@ -283,7 +286,7 @@ async def get_snapshot():
             items.append({
                 "symbol": f"{sym_display} ({'SPOT' if is_spot else 'PERP'})", "exchange": "BIN", "direction": "LONG", "score": int(current_score),
                 "phase": status, "price": f"{price:.4f}", "m1": "1.0", "m3": "1.5", "m5": "2.0",
-                "volx": "1.5x", "buy_pct": 75, "obi": "1.50", "cvd": "↑", "spread": "Stabil",
+                "volx": "1.5x", "buy_pct": 75, "obi": "1.50", "cvd": "↑", "spread": "Stable",
                 "ask_sweep": "-", "bid_stack": "-", "oi_delta": "-", "trigger": "-",
                 "entry_band": f"{price*0.99:.3f}-{price*1.01:.3f}", "tp_sl": f"TP1 {price*1.03:.3f}",
                 "status": status, "time": datetime.now().strftime("%H:%M:%S"), "category": cat
@@ -316,7 +319,7 @@ async def binance_ws_loop():
                     data = await ws.recv()
                     payload = json.loads(data)
                     for ticker in payload:
-                        item = process_ticker(ticker, "Vadeli İşlemler (Futures)")
+                        item = process_ticker(ticker, "Futures")
                         if item:
                             await manager.broadcast({
                                 "type": "scanner_update",
@@ -337,7 +340,7 @@ async def binance_spot_ws_loop():
                     data = await ws.recv()
                     payload = json.loads(data)
                     for ticker in payload:
-                        item = process_ticker(ticker, "Spot Piyasası")
+                        item = process_ticker(ticker, "Spot Market")
                         if item:
                             await manager.broadcast({
                                 "type": "scanner_update",
