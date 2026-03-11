@@ -117,7 +117,9 @@ class BotConfig(BaseModel):
     promo_enabled: bool = True
     # Scanner runtime (overrides proptrex config)
     scan_interval_seconds: int = 60
-    min_volume_usd: float = 250000
+    timeframe: str = "15m"
+    candle_limit: int = 300
+    min_volume_usd: float = 10000
     dynamic_scan: bool = True
     top_n_symbols: int = 100
     exchanges: str = "binance,mexc,gateio,kucoin,okx"
@@ -405,10 +407,10 @@ def _compute_signals_sync(cfg: dict, engine: dict) -> dict:
     square_adapter: BinanceSquareAdapter = engine["square_adapter"]
     ob_engines: Dict[str, OrderbookEngine] = engine["ob_engines"]
 
-    timeframe = "1m"
-    candle_limit = 300
+    timeframe = cfg.get("timeframe", "15m")
+    candle_limit = int(cfg.get("candle_limit", 300))
     chart_bars = 140
-    min_volume_usd = float(cfg.get("min_volume_usd", 250000))
+    min_volume_usd = float(cfg.get("min_volume_usd", 10000))
     dynamic_scan = bool(cfg.get("dynamic_scan", True))
     top_n = int(cfg.get("top_n_symbols", 100))
     dynamic_min_vol = 500000

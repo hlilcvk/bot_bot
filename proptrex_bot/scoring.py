@@ -312,19 +312,17 @@ def build_signal(
     side = "NONE"
 
     if (
-        structure_bias in ["BULLISH", "DECISION"]
-        and buyer_pct >= 51
+        structure_bias in ["BULLISH", "DECISION", "RANGE"]
+        and buyer_pct >= 50.1
         and whale_action in ["BUY", "NONE"]
-        and liquidity_event in ["SELL_SIDE_SWEPT", "NONE"]
         and mom_bias in ["BULLISH", "NEUTRAL"]
     ):
         side = "LONG"
 
     elif (
-        structure_bias in ["BEARISH", "DECISION"]
-        and seller_pct >= 51
+        structure_bias in ["BEARISH", "DECISION", "RANGE"]
+        and seller_pct >= 50.1
         and whale_action in ["SELL", "NONE"]
-        and liquidity_event in ["BUY_SIDE_SWEPT", "NONE"]
         and mom_bias in ["BEARISH", "NEUTRAL"]
     ):
         side = "SHORT"

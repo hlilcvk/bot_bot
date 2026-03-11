@@ -467,8 +467,24 @@
                             <input type="number" id="scan_interval_seconds" min="30" max="3600" value="60">
                         </div>
                         <div class="form-group">
-                            <label>Min. Hacim (USD)</label>
-                            <input type="number" id="min_volume_usd" min="10000" value="250000">
+                            <label>Zaman Dilimi (timeframe)</label>
+                            <select id="timeframe">
+                                <option value="5m">5m</option>
+                                <option value="15m" selected>15m</option>
+                                <option value="30m">30m</option>
+                                <option value="1h">1h</option>
+                                <option value="4h">4h</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row2">
+                        <div class="form-group">
+                            <label>Min. Hacim / Mum (USD)</label>
+                            <input type="number" id="min_volume_usd" min="1000" value="10000">
+                        </div>
+                        <div class="form-group">
+                            <label>Mum Sayısı (candle_limit)</label>
+                            <input type="number" id="candle_limit" min="100" max="1000" value="300">
                         </div>
                     </div>
                     <div class="row2">
@@ -575,7 +591,9 @@ async function loadSettings() {
 
         chk('square_enabled', d.square_enabled !== undefined ? d.square_enabled : true);
         set('scan_interval_seconds', d.scan_interval_seconds ?? 60);
-        set('min_volume_usd', d.min_volume_usd ?? 250000);
+        set('timeframe', d.timeframe ?? '15m');
+        set('min_volume_usd', d.min_volume_usd ?? 10000);
+        set('candle_limit', d.candle_limit ?? 300);
         set('top_n_symbols', d.top_n_symbols ?? 100);
         chk('dynamic_scan', d.dynamic_scan !== undefined ? d.dynamic_scan : true);
         set('exchanges', d.exchanges ?? 'binance,mexc,gateio,kucoin,okx');
@@ -620,6 +638,8 @@ document.getElementById('configForm').addEventListener('submit', async (e) => {
         promo_link: val('promo_link'),
         promo_enabled: chk('promo_enabled'),
         scan_interval_seconds: num('scan_interval_seconds'),
+        timeframe: val('timeframe'),
+        candle_limit: num('candle_limit'),
         min_volume_usd: num('min_volume_usd'),
         top_n_symbols: num('top_n_symbols'),
         dynamic_scan: chk('dynamic_scan'),
