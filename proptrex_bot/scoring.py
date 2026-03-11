@@ -297,7 +297,7 @@ def build_signal(
     context_map: Dict[str, str],
 ) -> SignalResult | None:
     df = compute_indicators(df)
-    if len(df) < 220:
+    if len(df) < 180:
         return None
 
     buyer_pct, seller_pct = buyer_seller_pressure(df)
@@ -369,11 +369,9 @@ def build_signal(
     freshness = entry_freshness(df, side, entry_low, entry_high)
     expected_hold, expiry_minutes = hold_profile(timeframe)
 
-    if freshness == "Do Not Chase":
-        status = "WATCHLIST"
-    elif opportunity_score >= 75 and why_enter_score >= 70:
+    if opportunity_score >= 70 and why_enter_score >= 65:
         status = "TRADEABLE"
-    elif opportunity_score >= 65:
+    elif opportunity_score >= 60:
         status = "WATCHLIST"
     else:
         return None
