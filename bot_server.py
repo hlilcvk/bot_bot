@@ -165,6 +165,14 @@ async def login(req: LoginRequest):
         return {"status": "success"}
     return {"status": "error", "message": "Geçersiz şifre"}
 
+@app.get("/api/debug-log")
+async def get_debug_log():
+    debug_path = os.path.join(_BOT_DIR, "proptrex_bot", "bot_debug.txt")
+    if os.path.exists(debug_path):
+        with open(debug_path, "r", encoding="utf-8") as f:
+            return f.read()
+    return "No debug log found yet. Let the bot scan first."
+
 
 @app.get("/api/signals")
 async def get_signals():

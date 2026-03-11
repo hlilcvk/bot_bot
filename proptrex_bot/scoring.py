@@ -328,7 +328,9 @@ def build_signal(
         side = "SHORT"
 
     if side == "NONE":
-        print(f"[debug-fail] {symbol} -> side=NONE | struct={structure_bias}, buy={buyer_pct:.1f}, sell={seller_pct:.1f}, whale={whale_action}, mom={mom_bias}")
+        msg = f"{symbol} | struct={structure_bias}, buy={buyer_pct:.1f}, sell={seller_pct:.1f}, whale={whale_action}, mom={mom_bias}\n"
+        with open("bot_debug.txt", "a") as f:
+            f.write(msg)
         return None
 
     context_score = score_market_context(context_map, side, coin_bias=structure_bias)
