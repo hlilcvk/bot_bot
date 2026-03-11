@@ -7,6 +7,5 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
-    volumes:
-      - ./bot_config.json:/app/bot_config.json
-      - ./signal_state.json:/app/signal_state.json
+    environment:
+      - MPLBACKEND=Agg

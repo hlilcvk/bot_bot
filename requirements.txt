@@ -1,32 +1,33 @@
 # Web framework
 fastapi==0.104.1
 uvicorn==0.24.0
-websockets==12.0
+websockets==13.1
 
 # HTTP + social
-requests==2.31.0
+requests==2.32.3
 tweepy==4.14.0
+beautifulsoup4==4.12.3
 
 # Data validation
 pydantic==2.5.2
 
 # Exchange data (proptrex engine)
-ccxt==4.2.25
-pandas==2.1.4
-numpy==1.26.4
+ccxt==4.4.35
+pandas==2.2.2
+numpy==2.1.1
 ta==0.11.0
 
-# Charting (optional, disable in config if not needed)
-matplotlib==3.8.2
+# Charting
+matplotlib==3.9.2
 
 # Telegram bot (used by standalone telegram_bot.py only)
-python-telegram-bot==20.7
+python-telegram-bot==21.6
 
 # HTML parsing (square_adapter)
 beautifulsoup4==4.12.3
 
 # Config parsing
-PyYAML==6.0.1
+PyYAML==6.0.2
 
 # Redis (optional backend)
-redis==5.0.1
+redis==5.0.8
