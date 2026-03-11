@@ -1,12 +1,12 @@
 version: '3.8'
 
 services:
-  pump-bot-server:
+  proptrex-bot:
     build: .
-    container_name: proptrex-pump-bot
+    container_name: proptrex-signal-bot
     restart: unless-stopped
     ports:
       - "8000:8000"
-    # Eger bot_config.json'un kalici olmasini istiyorsaniz asagidaki satiri acin
     volumes:
       - ./bot_config.json:/app/bot_config.json
+      - ./signal_state.json:/app/signal_state.json
