@@ -482,7 +482,7 @@ def _compute_signals_sync(cfg: dict, engine: dict) -> dict:
         vol_avg = float((item.df["close"] * item.df["volume"]).tail(10).mean())
         if vol_avg < min_volume_usd:
             skipped_vol += 1
-            continue
+            # continue  # REMOVED: allow evaluating low volume coins temporarily for signals
         signal = build_signal(
             symbol=item.symbol, exchange=item.exchange,
             timeframe=item.timeframe, df=item.df, context_map=context_map,
