@@ -22,6 +22,9 @@ matplotlib==3.8.2
 # Telegram bot (used by standalone telegram_bot.py only)
 python-telegram-bot==20.7
 
+# HTML parsing (square_adapter)
+beautifulsoup4==4.12.3
+
 # Config parsing
 PyYAML==6.0.1
 
