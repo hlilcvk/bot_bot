@@ -100,7 +100,7 @@ def buyer_seller_pressure(df: pd.DataFrame, lookback: int = 20) -> Tuple[float, 
     return buy_pct, sell_pct
 
 
-def detect_whale(df: pd.DataFrame, vol_mult: float = 2.5) -> Tuple[str, float, float]:
+def detect_whale(df: pd.DataFrame, vol_mult: float = 1.5) -> Tuple[str, float, float]:
     row = df.iloc[-1]
     if row["vol_ma20"] <= 0:
         return "NONE", 0.0, 1.0
@@ -313,19 +313,19 @@ def build_signal(
 
     if (
         structure_bias in ["BULLISH", "DECISION"]
-        and buyer_pct >= 56
-        and whale_action == "BUY"
+        and buyer_pct >= 51
+        and whale_action in ["BUY", "NONE"]
         and liquidity_event in ["SELL_SIDE_SWEPT", "NONE"]
-        and mom_bias == "BULLISH"
+        and mom_bias in ["BULLISH", "NEUTRAL"]
     ):
         side = "LONG"
 
     elif (
         structure_bias in ["BEARISH", "DECISION"]
-        and seller_pct >= 56
-        and whale_action == "SELL"
+        and seller_pct >= 51
+        and whale_action in ["SELL", "NONE"]
         and liquidity_event in ["BUY_SIDE_SWEPT", "NONE"]
-        and mom_bias == "BEARISH"
+        and mom_bias in ["BEARISH", "NEUTRAL"]
     ):
         side = "SHORT"
 
@@ -373,9 +373,9 @@ def build_signal(
 
     if freshness == "Do Not Chase":
         status = "WATCHLIST"
-    elif opportunity_score >= 82 and why_enter_score >= 80:
+    elif opportunity_score >= 75 and why_enter_score >= 70:
         status = "TRADEABLE"
-    elif opportunity_score >= 70:
+    elif opportunity_score >= 65:
         status = "WATCHLIST"
     else:
         return None
