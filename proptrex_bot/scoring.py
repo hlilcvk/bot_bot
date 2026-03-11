@@ -309,10 +309,27 @@ def build_signal(
         df, buyer_pct, seller_pct, whale_action
     )
 
-    if buyer_pct > seller_pct:
+    side = "NONE"
+
+    if (
+        structure_bias in ["BULLISH", "DECISION", "RANGE"]
+        and buyer_pct >= 50.1
+        and whale_action in ["BUY", "NONE"]
+        and mom_bias in ["BULLISH", "NEUTRAL"]
+    ):
         side = "LONG"
-    else:
+
+    elif (
+        structure_bias in ["BEARISH", "DECISION", "RANGE"]
+        and seller_pct >= 50.1
+        and whale_action in ["SELL", "NONE"]
+        and mom_bias in ["BEARISH", "NEUTRAL"]
+    ):
         side = "SHORT"
+
+    if side == "NONE":
+        print(f"[debug-fail] {symbol} -> side=NONE | struct={structure_bias}, buy={buyer_pct:.1f}, sell={seller_pct:.1f}, whale={whale_action}, mom={mom_bias}")
+        return None
 
     context_score = score_market_context(context_map, side, coin_bias=structure_bias)
     if side == "LONG":
@@ -358,6 +375,7 @@ def build_signal(
     elif opportunity_score >= 60:
         status = "WATCHLIST"
     else:
+        print(f"[debug-score] {symbol} -> side={side} | opp={opportunity_score}, why={why_enter_score}")
         return None
 
     why_lines = []
