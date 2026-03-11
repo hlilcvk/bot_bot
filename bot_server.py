@@ -175,6 +175,7 @@ async def get_index():
 
 
 @app.get("/platform")
+@app.get("/platform.html")
 async def get_platform():
     return FileResponse(os.path.join(_BOT_DIR, "platform.html"))
 
@@ -364,54 +365,6 @@ def _build_engine(cfg: dict) -> dict:
 
 # ── Lifecycle update checker ─────────────────────────────────────────────────
 
-async def send_lifecycle_updates(engine: dict, cfg: dict):
-    scanner: MultiExchangeScanner = engine["scanner"]
-    position_book: OpenPositionBook = engine["position_book"]
-    lifecycle: SignalLifecycle = engine["lifecycle"]
-
-    for symbol, pos in list(position_book.positions.items()):
-        if pos.status in ("TP3_HIT", "INVALIDATED"):
-            position_book.close(symbol)
-            continue
-
-        data = scanner.fetch_first_available(symbol, timeframe="1m", limit=300)
-        if data is None or data.df.empty:
-            continue
-
-        current_price = float(data.df.iloc[-1]["close"])
-        update = lifecycle.evaluate(
-            side=pos.side,
-            current_price=current_price,
-            entry_low=pos.entry_low,
-            entry_high=pos.entry_high,
-            stop_loss=pos.stop_loss,
-            tp1=pos.tp1,
-            tp2=pos.tp2,
-            tp3=pos.tp3,
-        )
-
-        if update.status != "ACTIVE" and update.status != pos.status:
-            pos.status = update.status
-            detail = "\n".join([f"• {x}" for x in update.lines])
-            msg = (
-                f"📊 LIFECYCLE UPDATE | {symbol}\n\n"
-                f"Status: {update.status}\n"
-                f"Action: {update.action}\n\n"
-                f"{detail}\n\n"
-                f"Current Price: {current_price}"
-            )
-            await send_telegram_raw(cfg, msg)
-            await manager.broadcast({
-                "type": "lifecycle_update",
-                "symbol": symbol,
-                "status": update.status,
-                "action": update.action,
-                "price": current_price,
-                "ts": int(time.time() * 1000),
-            })
-            if update.status in ("TP3_HIT", "INVALIDATED"):
-                position_book.close(symbol)
-
 
 # ── Main scan loop ────────────────────────────────────────────────────────────
 
@@ -437,14 +390,16 @@ async def scan_loop():
         await asyncio.sleep(interval)
 
 
-async def _do_scan(cfg: dict):
-    global _signal_counter, _engine
-
-    engine = _engine
+def _compute_signals_sync(cfg: dict, engine: dict) -> dict:
+    """
+    All blocking I/O (ccxt OHLCV fetches, orderbook, social scraping, charting)
+    runs here in a thread pool so the asyncio event loop stays responsive.
+    Returns a dict with lifecycle updates + scored signal items ready to dispatch.
+    """
     scanner: MultiExchangeScanner = engine["scanner"]
     store = engine["store"]
     position_book: OpenPositionBook = engine["position_book"]
-    social_engine: SocialEngine = engine["social_engine"]
+    social_engine_obj: SocialEngine = engine["social_engine"]
     pm: PortfolioManager = engine["pm"]
     x_adapter: XAdapter = engine["x_adapter"]
     square_adapter: BinanceSquareAdapter = engine["square_adapter"]
@@ -457,72 +412,104 @@ async def _do_scan(cfg: dict):
     dynamic_scan = bool(cfg.get("dynamic_scan", True))
     top_n = int(cfg.get("top_n_symbols", 100))
     dynamic_min_vol = 500000
-
     context_symbols = ["BTC/USDT", "ETH/USDT", "SOL/USDT"]
+    square_enabled = bool(cfg.get("square_enabled", True))
 
-    # Lifecycle checks
-    await send_lifecycle_updates(engine, cfg)
+    # ── Lifecycle data collection ────────────────────────────────────────────
+    lifecycle_updates = []
+    lifecycle: SignalLifecycle = engine["lifecycle"]
+    for symbol, pos in list(position_book.positions.items()):
+        if pos.status in ("TP3_HIT", "INVALIDATED"):
+            position_book.close(symbol)
+            continue
+        data = scanner.fetch_first_available(symbol, timeframe=timeframe, limit=candle_limit)
+        if data is None or data.df.empty:
+            continue
+        current_price = float(data.df.iloc[-1]["close"])
+        update = lifecycle.evaluate(
+            side=pos.side, current_price=current_price,
+            entry_low=pos.entry_low, entry_high=pos.entry_high,
+            stop_loss=pos.stop_loss, tp1=pos.tp1, tp2=pos.tp2, tp3=pos.tp3,
+        )
+        if update.status != "ACTIVE" and update.status != pos.status:
+            pos.status = update.status
+            lifecycle_updates.append({
+                "symbol": symbol, "status": update.status,
+                "action": update.action, "price": current_price,
+                "lines": update.lines,
+            })
+            if update.status in ("TP3_HIT", "INVALIDATED"):
+                position_book.close(symbol)
 
-    # Macro context
+    # ── Macro context ────────────────────────────────────────────────────────
+    print(f"[scanner] fetching macro context ({len(context_symbols)} symbols)...")
     context_map: Dict[str, str] = {}
     for s in context_symbols:
         cdata = scanner.fetch_first_available(s, timeframe=timeframe, limit=candle_limit)
         if cdata is None:
             continue
         context_map[s] = classify_context(cdata)
+    print(f"[scanner] context: {context_map}")
 
-    # Universe
+    # ── Universe fetch ───────────────────────────────────────────────────────
     if dynamic_scan:
+        print(f"[scanner] dynamic scan: top_n={top_n}, min_vol={dynamic_min_vol}")
         universe_pre = scanner.fetch_universe_dynamic(
-            timeframe=timeframe,
-            limit=candle_limit,
-            min_volume_usd=dynamic_min_vol,
-            top_n=top_n,
+            timeframe=timeframe, limit=candle_limit,
+            min_volume_usd=dynamic_min_vol, top_n=top_n,
         )
     else:
         default_symbols = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "DOGE/USDT",
                            "AVAX/USDT", "OP/USDT", "LINK/USDT", "ADA/USDT", "WIF/USDT"]
+        print(f"[scanner] static scan: {len(default_symbols)} symbols")
         universe_pre = scanner.fetch_universe(default_symbols, timeframe=timeframe, limit=candle_limit)
 
-    # Enrich context_map with coin-level bias
+    print(f"[scanner] universe fetched: {len(universe_pre)} items")
+
     for item in universe_pre:
         if item.symbol not in context_map:
             context_map[item.symbol] = classify_context(item)
 
+    # ── Score ────────────────────────────────────────────────────────────────
     ranked = []
+    skipped_vol = 0
+    skipped_score = 0
+    watchlist_count = 0
+
     for item in universe_pre:
         if item.df.empty:
             continue
         vol_avg = float((item.df["close"] * item.df["volume"]).tail(10).mean())
         if vol_avg < min_volume_usd:
+            skipped_vol += 1
             continue
         signal = build_signal(
-            symbol=item.symbol,
-            exchange=item.exchange,
-            timeframe=item.timeframe,
-            df=item.df,
-            context_map=context_map,
+            symbol=item.symbol, exchange=item.exchange,
+            timeframe=item.timeframe, df=item.df, context_map=context_map,
         )
         if signal is None:
+            skipped_score += 1
             continue
         if signal.status != "TRADEABLE":
+            watchlist_count += 1
             continue
         ranked.append((signal.opportunity_score, signal, item.df))
 
     ranked.sort(key=lambda x: x[0], reverse=True)
     top = ranked[:3]
+    print(f"[scanner] scored — skipped_vol={skipped_vol} no_signal={skipped_score} "
+          f"watchlist={watchlist_count} tradeable={len(ranked)} sending_top={len(top)}")
 
+    # ── Enrich top 3 ─────────────────────────────────────────────────────────
+    items_out = []
     for _, signal, df in top:
         key = f"{signal.exchange}:{signal.symbol}:{signal.side}:{signal.status}"
 
         x_posts = x_adapter.texts_for_symbol(signal.symbol, limit=20) if x_adapter.is_enabled() else []
-        square_enabled = bool(cfg.get("square_enabled", True))
         square_posts = square_adapter.texts_for_symbol(signal.symbol, limit=20) if square_enabled else []
 
-        social = social_engine.analyze(
-            symbol=signal.symbol,
-            x_posts=x_posts,
-            square_posts=square_posts,
+        social = social_engine_obj.analyze(
+            symbol=signal.symbol, x_posts=x_posts, square_posts=square_posts,
             historical_x_count=max(10, len(x_posts)),
             historical_square_count=max(10, len(square_posts)),
         )
@@ -533,14 +520,9 @@ async def _do_scan(cfg: dict):
             ob_signal = ob_engine.analyze(signal.symbol, depth=20)
 
         plan = pm.build_plan(
-            symbol=signal.symbol,
-            side=signal.side,
-            entry_low=signal.entry_low,
-            entry_high=signal.entry_high,
-            stop_loss=signal.stop_loss,
-            tp1=signal.tp1,
-            tp2=signal.tp2,
-            tp3=signal.tp3,
+            symbol=signal.symbol, side=signal.side,
+            entry_low=signal.entry_low, entry_high=signal.entry_high,
+            stop_loss=signal.stop_loss, tp1=signal.tp1, tp2=signal.tp2, tp3=signal.tp3,
         )
         portfolio_lines = pm.plan_to_lines(plan)
 
@@ -557,52 +539,88 @@ async def _do_scan(cfg: dict):
 
         dedup_minutes = 45
         if not store.allow(key, payload_hash, cooldown_minutes=dedup_minutes):
+            print(f"[scanner] dedup skip: {signal.symbol} {signal.side}")
             continue
 
-        # Track position
-        position_book.open_from_signal(signal)
-        _signal_counter += 1
+        caption = build_caption(signal, social=social,
+                                portfolio_lines=portfolio_lines, orderbook=ob_signal)
 
-        # Build caption
-        caption = build_caption(
-            signal,
-            social=social,
-            portfolio_lines=portfolio_lines,
-            orderbook=ob_signal,
-        )
-
-        # Append referral block conditionally
-        add_ref = should_add_referral(cfg)
-        if add_ref:
-            ref_block = build_referral_block(cfg)
-            full_caption = caption + "\n" + ref_block
-        else:
-            full_caption = caption
-
-        # Chart
         chart_path = None
         try:
             chart_path = render_signal_chart(
-                df=df,
-                signal=signal,
+                df=df, signal=signal,
                 title=f"{signal.symbol} | {signal.side} | {signal.opportunity_score:.1f}",
                 bars=chart_bars,
             )
         except Exception as e:
             print(f"[chart] error: {e}")
 
-        # Send notifications (non-blocking)
+        items_out.append({
+            "key": key,
+            "signal": signal,
+            "social": social,
+            "ob_signal": ob_signal,
+            "caption": caption,
+            "chart_path": chart_path,
+        })
+
+    return {"lifecycle_updates": lifecycle_updates, "items": items_out}
+
+
+async def _do_scan(cfg: dict):
+    global _signal_counter, _engine
+
+    print(f"[scanner] scan started at {datetime.now().strftime('%H:%M:%S')}")
+    t0 = time.time()
+
+    # Run all blocking I/O in a thread — event loop stays free
+    result = await asyncio.to_thread(_compute_signals_sync, cfg, _engine)
+
+    elapsed = time.time() - t0
+    print(f"[scanner] compute done in {elapsed:.1f}s — "
+          f"{len(result['items'])} new signals, {len(result['lifecycle_updates'])} lifecycle updates")
+
+    # ── Dispatch lifecycle updates ────────────────────────────────────────────
+    for upd in result["lifecycle_updates"]:
+        detail = "\n".join([f"• {x}" for x in upd["lines"]])
+        msg = (
+            f"📊 LIFECYCLE UPDATE | {upd['symbol']}\n\n"
+            f"Status: {upd['status']}\n"
+            f"Action: {upd['action']}\n\n"
+            f"{detail}\n\n"
+            f"Current Price: {upd['price']}"
+        )
+        await send_telegram_raw(cfg, msg)
+        await manager.broadcast({
+            "type": "lifecycle_update",
+            "symbol": upd["symbol"], "status": upd["status"],
+            "action": upd["action"], "price": upd["price"],
+            "ts": int(time.time() * 1000),
+        })
+
+    # ── Dispatch new signals ──────────────────────────────────────────────────
+    for item in result["items"]:
+        signal = item["signal"]
+        social = item["social"]
+        ob_signal = item["ob_signal"]
+        caption = item["caption"]
+        chart_path = item["chart_path"]
+
+        _engine["position_book"].open_from_signal(signal)
+        _signal_counter += 1
+
+        add_ref = should_add_referral(cfg)
+        full_caption = caption + "\n" + build_referral_block(cfg) if add_ref else caption
+
         await send_telegram_raw(cfg, full_caption, photo_path=chart_path)
         await send_twitter(cfg, full_caption[:280])
 
-        # Cleanup chart file
         if chart_path and os.path.exists(chart_path):
             try:
                 os.remove(chart_path)
             except Exception:
                 pass
 
-        # Build WebSocket payload
         signal_payload = {
             "type": "signal",
             "ts": int(time.time() * 1000),
@@ -638,15 +656,13 @@ async def _do_scan(cfg: dict):
             "has_referral": add_ref,
         }
 
-        # Store in recent signals (capped at 50)
         recent_signals.insert(0, signal_payload)
         if len(recent_signals) > 50:
             recent_signals.pop()
 
-        # Broadcast to all connected browsers
         await manager.broadcast(signal_payload)
-
-        print(f"[signal #{_signal_counter}] {signal.symbol} {signal.side} score={signal.opportunity_score:.1f} ref={add_ref}")
+        print(f"[signal #{_signal_counter}] {signal.symbol} {signal.side} "
+              f"score={signal.opportunity_score:.1f} ref={add_ref}")
 
 
 # ── WebSocket ─────────────────────────────────────────────────────────────────
