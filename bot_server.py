@@ -122,6 +122,7 @@ class BotConfig(BaseModel):
     timeframe: str = "15m"
     candle_limit: int = 500
     min_volume_usd: float = 10000
+    min_opportunity_score: float = 55.0
     dynamic_scan: bool = True
     top_n_symbols: int = 100
     exchanges: str = "binance,mexc,gateio,kucoin,okx"
@@ -496,10 +497,11 @@ def _compute_signals_sync(cfg: dict, engine: dict) -> dict:
             context_map[item.symbol] = classify_context(item)
 
     # ── Score ────────────────────────────────────────────────────────────────
+    min_score = float(cfg.get("min_opportunity_score", 55.0))
     ranked = []
     skipped_vol = 0
     skipped_score = 0
-    watchlist_count = 0
+    below_min = 0
 
     for item in universe_pre:
         if item.df.empty:
@@ -507,7 +509,7 @@ def _compute_signals_sync(cfg: dict, engine: dict) -> dict:
         vol_avg = float((item.df["close"] * item.df["volume"]).tail(10).mean())
         if vol_avg < min_volume_usd:
             skipped_vol += 1
-            # continue  # REMOVED: allow evaluating low volume coins temporarily for signals
+            continue
         signal = build_signal(
             symbol=item.symbol, exchange=item.exchange,
             timeframe=item.timeframe, df=item.df, context_map=context_map,
@@ -515,15 +517,15 @@ def _compute_signals_sync(cfg: dict, engine: dict) -> dict:
         if signal is None:
             skipped_score += 1
             continue
-        if signal.status != "TRADEABLE":
-            watchlist_count += 1
+        if signal.opportunity_score < min_score:
+            below_min += 1
             continue
         ranked.append((signal.opportunity_score, signal, item.df))
 
     ranked.sort(key=lambda x: x[0], reverse=True)
     top = ranked[:3]
     print(f"[scanner] scored — skipped_vol={skipped_vol} no_signal={skipped_score} "
-          f"watchlist={watchlist_count} tradeable={len(ranked)} sending_top={len(top)}")
+          f"below_min={below_min} qualified={len(ranked)} sending_top={len(top)}")
 
     # ── Enrich top 3 ─────────────────────────────────────────────────────────
     items_out = []
