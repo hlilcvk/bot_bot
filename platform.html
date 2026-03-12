@@ -212,6 +212,13 @@ td{padding:11px 14px;white-space:nowrap;vertical-align:middle}
     <button class="ftag" data-filter="exch" data-val="gateio" onclick="setFilter('exch','gateio',this)">Gate.io</button>
     <button class="ftag" data-filter="exch" data-val="kucoin" onclick="setFilter('exch','kucoin',this)">KuCoin</button>
     <button class="ftag" data-filter="exch" data-val="okx" onclick="setFilter('exch','okx',this)">OKX</button>
+    <div class="f-sep"></div>
+    <span class="fb-label">Kategori</span>
+    <button class="ftag on" data-filter="cat" data-val="ALL" onclick="setFilter('cat','ALL',this)">Tümü</button>
+    <button class="ftag" data-filter="cat" data-val="KRIPTO" onclick="setFilter('cat','KRIPTO',this)">Kripto</button>
+    <button class="ftag" data-filter="cat" data-val="ALTIN" onclick="setFilter('cat','ALTIN',this)">Altın</button>
+    <button class="ftag" data-filter="cat" data-val="STABLE" onclick="setFilter('cat','STABLE',this)">Stable</button>
+    <button class="ftag" data-filter="cat" data-val="KALDIRAC" onclick="setFilter('cat','KALDIRAC',this)">Kaldıraç</button>
     <input class="f-search" type="text" placeholder="Search symbol..." id="searchInput" oninput="renderTable()">
   </div>
 
@@ -260,6 +267,7 @@ let sortKey = 'ts';
 let sortDir = -1;
 let filterSide = 'ALL';
 let filterExch = 'ALL';
+let filterCat  = 'ALL';
 let totalSig = 0, totalLong = 0, totalShort = 0;
 
 // ── WebSocket ────────────────────────────────────────────────────────────────
@@ -335,6 +343,7 @@ function renderTable() {
   // Filter
   if (filterSide !== 'ALL') rows = rows.filter(s => s.side === filterSide);
   if (filterExch !== 'ALL') rows = rows.filter(s => s.exchange === filterExch);
+  if (filterCat  !== 'ALL') rows = rows.filter(s => getSymCat(s.symbol) === filterCat);
   if (search) rows = rows.filter(s => s.symbol.toLowerCase().includes(search));
 
   // Sort
@@ -488,9 +497,18 @@ function closeDrawer() {
 }
 
 // ── Filters / sort ────────────────────────────────────────────────────────────
+function getSymCat(symbol) {
+  const base = symbol.split('/')[0].toUpperCase();
+  if (STABLE_SET.has(base)) return 'STABLE';
+  if (GOLD_SET.has(base))   return 'ALTIN';
+  if (/\d[SL]$/.test(base) || base.endsWith('UP') || base.endsWith('DOWN') || base.endsWith('BULL') || base.endsWith('BEAR')) return 'KALDIRAC';
+  return 'KRIPTO';
+}
+
 function setFilter(type, val, el) {
   if (type === 'side') filterSide = val;
-  else filterExch = val;
+  else if (type === 'exch') filterExch = val;
+  else if (type === 'cat')  filterCat  = val;
   document.querySelectorAll(`[data-filter="${type}"]`).forEach(b => b.classList.remove('on'));
   el.classList.add('on');
   renderTable();

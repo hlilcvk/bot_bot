@@ -205,20 +205,29 @@ def derive_levels(df: pd.DataFrame, side: str) -> Tuple[float, float, float, flo
     atr = float(row["atr"])
     close = float(row["close"])
 
+    # Use recent swing structure for stop placement
+    recent = df.tail(30)
+    swing_low = float(recent["low"].min())
+    swing_high = float(recent["high"].max())
+
     if side == "LONG":
-        entry_low = close - atr * 0.35
-        entry_high = close + atr * 0.05
-        stop = close - atr * 1.25
-        tp1 = close + atr * 0.8
-        tp2 = close + atr * 1.8
-        tp3 = close + atr * 3.0
+        entry_low = close - atr * 0.30
+        entry_high = close + atr * 0.10
+        # Stop below swing low, capped at 2.5×ATR below entry_high
+        stop = max(swing_low - atr * 0.15, entry_high - atr * 2.5)
+        risk = entry_high - stop          # actual R per unit
+        tp1 = entry_high + risk * 1.5    # 1.5R
+        tp2 = entry_high + risk * 2.5    # 2.5R
+        tp3 = entry_high + risk * 4.0    # 4R
     else:
-        entry_low = close - atr * 0.05
-        entry_high = close + atr * 0.35
-        stop = close + atr * 1.25
-        tp1 = close - atr * 0.8
-        tp2 = close - atr * 1.8
-        tp3 = close - atr * 3.0
+        entry_low = close - atr * 0.10
+        entry_high = close + atr * 0.30
+        # Stop above swing high, capped at 2.5×ATR above entry_low
+        stop = min(swing_high + atr * 0.15, entry_low + atr * 2.5)
+        risk = stop - entry_low           # actual R per unit
+        tp1 = entry_low - risk * 1.5     # 1.5R
+        tp2 = entry_low - risk * 2.5     # 2.5R
+        tp3 = entry_low - risk * 4.0     # 4R
 
     return (
         round(entry_low, 6),
@@ -443,9 +452,9 @@ def build_signal(
         tp1=tp1,
         tp2=tp2,
         tp3=tp3,
-        tp1_tf="1m" if timeframe == "1m" else "5m",
-        tp2_tf="5m" if timeframe in ["1m", "3m"] else "15m",
-        tp3_tf="15m" if timeframe in ["1m", "3m", "5m"] else "1H",
+        tp1_tf=timeframe,
+        tp2_tf={"1m": "5m", "3m": "15m", "5m": "15m", "15m": "1h", "30m": "1h", "1h": "4h", "4h": "1d"}.get(timeframe, "1h"),
+        tp3_tf={"1m": "15m", "3m": "30m", "5m": "1h", "15m": "4h", "30m": "4h", "1h": "1d", "4h": "1w"}.get(timeframe, "4h"),
         expected_hold=expected_hold,
         expiry_minutes=expiry_minutes,
         entry_freshness=freshness,

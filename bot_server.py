@@ -539,7 +539,7 @@ def _compute_signals_sync(cfg: dict, engine: dict) -> dict:
     # ── Enrich top signals ────────────────────────────────────────────────────
     items_out = []
     for _, signal, df in top:
-        key = f"{signal.exchange}:{signal.symbol}:{signal.side}:{signal.status}"
+        key = f"{signal.exchange}:{signal.symbol}:{signal.side}"
 
         x_posts = x_adapter.texts_for_symbol(signal.symbol, limit=20) if x_adapter.is_enabled() else []
         square_posts = square_adapter.texts_for_symbol(signal.symbol, limit=20) if square_enabled else []
@@ -564,12 +564,9 @@ def _compute_signals_sync(cfg: dict, engine: dict) -> dict:
 
         payload_hash = hashlib.md5(
             (
-                f"{signal.symbol}|{signal.side}|{signal.status}|"
-                f"{signal.entry_low}|{signal.entry_high}|{signal.stop_loss}|"
-                f"{signal.tp1}|{signal.tp2}|{signal.tp3}|"
-                f"{signal.opportunity_score:.2f}|{signal.why_enter_score:.2f}|"
-                f"{social.social_conviction:.2f}|"
-                f"{ob_signal.score if ob_signal else 0.0}"
+                f"{signal.symbol}|{signal.side}|"
+                f"{round(signal.entry_low, 4)}|{round(signal.entry_high, 4)}|"
+                f"{round(signal.stop_loss, 4)}"
             ).encode("utf-8")
         ).hexdigest()
 
