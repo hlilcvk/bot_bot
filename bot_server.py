@@ -54,14 +54,16 @@ app.add_middleware(
 )
 
 CONFIG_FILE = os.path.join(_BOT_DIR, "bot_config.json")
-PROPTREX_CONFIG_FILE = os.path.join(_BOT_DIR, "proptrex_bot", "config.example.yaml")
 
 # In-memory signal store (last 50 signals)
 recent_signals: List[dict] = []
 
 # Signal counter for referral frequency tracking
 _signal_counter = 0
+_scan_counter = 0
 
+
+_VALID_TIMEFRAMES = {"1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "12h", "1d"}
 
 # ── Connection Manager ───────────────────────────────────────────────────────
 
@@ -150,7 +152,12 @@ async def get_config():
 
 @app.post("/api/config")
 async def update_config(config: BotConfig):
-    save_config(config.model_dump())
+    data = config.model_dump()
+    # Preserve admin_password from disk if not explicitly changed
+    existing = load_config()
+    if existing.get("admin_password") and not config.admin_password:
+        data["admin_password"] = existing["admin_password"]
+    save_config(data)
     return {"status": "success"}
 
 
@@ -164,14 +171,6 @@ async def login(req: LoginRequest):
     if req.password == cfg.get("admin_password", "proptrex2026"):
         return {"status": "success"}
     return {"status": "error", "message": "Geçersiz şifre"}
-
-@app.get("/api/debug-log")
-async def get_debug_log():
-    debug_path = os.path.join(_BOT_DIR, "proptrex_bot", "bot_debug.txt")
-    if os.path.exists(debug_path):
-        with open(debug_path, "r", encoding="utf-8") as f:
-            return f.read()
-    return "No debug log found yet. Let the bot scan first."
 
 
 @app.get("/api/signals")
@@ -379,7 +378,7 @@ def _build_engine(cfg: dict) -> dict:
 # ── Main scan loop ────────────────────────────────────────────────────────────
 
 async def scan_loop():
-    global _engine, _signal_counter
+    global _engine, _signal_counter, _scan_counter
 
     # Small delay on startup to let FastAPI finish
     await asyncio.sleep(5)
@@ -391,10 +390,23 @@ async def scan_loop():
     while True:
         cfg = load_config()  # re-read each cycle so admin changes take effect
 
+        # Rebuild engine if exchanges changed
+        new_exchanges = [e.strip() for e in cfg.get("exchanges", "binance,mexc,gateio,kucoin,okx").split(",") if e.strip()]
+        if new_exchanges != _engine["exchanges"]:
+            print(f"[scanner] exchanges changed → rebuilding engine: {new_exchanges}")
+            _engine = _build_engine(cfg)
+
         try:
             await _do_scan(cfg)
         except Exception as e:
             print(f"[scanner] error: {e}")
+
+        _scan_counter += 1
+        # Prune stale dedup entries every 10 scans
+        if _scan_counter % 10 == 0:
+            pruned = _engine["store"].prune()
+            if pruned:
+                print(f"[store] pruned {pruned} stale dedup entries")
 
         interval = int(cfg.get("scan_interval_seconds", 60))
         await asyncio.sleep(interval)
@@ -416,6 +428,9 @@ def _compute_signals_sync(cfg: dict, engine: dict) -> dict:
     ob_engines: Dict[str, OrderbookEngine] = engine["ob_engines"]
 
     timeframe = cfg.get("timeframe", "15m")
+    if timeframe not in _VALID_TIMEFRAMES:
+        print(f"[scanner] invalid timeframe '{timeframe}', falling back to 15m")
+        timeframe = "15m"
     candle_limit = int(cfg.get("candle_limit", 300))
     chart_bars = 140
     min_volume_usd = float(cfg.get("min_volume_usd", 10000))

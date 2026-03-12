@@ -78,6 +78,21 @@ class JsonStateStore:
 
         return False
 
+    def prune(self, max_age_multiplier: float = 3.0) -> int:
+        """Remove entries whose cooldown has expired by max_age_multiplier times.
+        Returns the number of removed entries."""
+        now = datetime.now(timezone.utc)
+        expired = [
+            k for k, v in self.state.items()
+            if now - datetime.fromisoformat(v.last_sent_at)
+            >= timedelta(minutes=v.cooldown_minutes * max_age_multiplier)
+        ]
+        for k in expired:
+            del self.state[k]
+        if expired:
+            self._save()
+        return len(expired)
+
     def upsert_metadata(self, key: str, symbol: str, exchange: str, side: str, status: str):
         if key not in self.state:
             return

@@ -359,6 +359,7 @@
                 <div id="statusMessage" class="status-msg"></div>
 
                 <form id="configForm">
+                    <input type="hidden" id="_admin_password" value="proptrex2026">
 
                     <h2>Telegram</h2>
                     <div class="form-group">
@@ -533,6 +534,13 @@
 <script>
 const API = "";
 
+// ── DOM helpers (module-level) ──────────────────────────────────────────
+const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ""; };
+const setChk = (id, v) => { const el = document.getElementById(id); if (el) el.checked = !!v; };
+const getVal = id => document.getElementById(id).value;
+const getChk = id => document.getElementById(id).checked;
+const getNum = id => Number(document.getElementById(id).value);
+
 // ── Login ──────────────────────────────────────────────────────────────
 async function tryLogin() {
     const pwd = document.getElementById('adminPassword').value;
@@ -564,39 +572,38 @@ async function loadSettings() {
         const res = await fetch(`${API}/api/config`);
         const d = await res.json();
 
-        const set = (id, val) => { const el = document.getElementById(id); if(el) el.value = val ?? ""; };
-        const chk = (id, val) => { const el = document.getElementById(id); if(el) el.checked = !!val; };
+        setVal('_admin_password', d.admin_password || 'proptrex2026');
 
-        set('tg_token', d.tg_token);
-        set('tg_chat_id', d.tg_chat_id);
-        chk('tg_enabled', d.tg_enabled);
+        setVal('tg_token', d.tg_token);
+        setVal('tg_chat_id', d.tg_chat_id);
+        setChk('tg_enabled', d.tg_enabled);
 
-        set('tw_api_key', d.tw_api_key);
-        set('tw_api_secret', d.tw_api_secret);
-        set('tw_access_token', d.tw_access_token);
-        set('tw_access_secret', d.tw_access_secret);
-        chk('tw_enabled', d.tw_enabled);
+        setVal('tw_api_key', d.tw_api_key);
+        setVal('tw_api_secret', d.tw_api_secret);
+        setVal('tw_access_token', d.tw_access_token);
+        setVal('tw_access_secret', d.tw_access_secret);
+        setChk('tw_enabled', d.tw_enabled);
 
-        chk('ref_enabled', d.ref_enabled !== undefined ? d.ref_enabled : true);
-        set('ref_every_n_signals', d.ref_every_n_signals ?? 3);
-        set('ref_binance', d.ref_binance);
-        set('ref_mexc', d.ref_mexc);
-        set('ref_gate', d.ref_gate);
-        set('ref_kucoin', d.ref_kucoin);
-        set('ref_okx', d.ref_okx);
+        setChk('ref_enabled', d.ref_enabled ?? true);
+        setVal('ref_every_n_signals', d.ref_every_n_signals ?? 3);
+        setVal('ref_binance', d.ref_binance);
+        setVal('ref_mexc', d.ref_mexc);
+        setVal('ref_gate', d.ref_gate);
+        setVal('ref_kucoin', d.ref_kucoin);
+        setVal('ref_okx', d.ref_okx);
 
-        set('platform_url', d.platform_url);
-        set('promo_link', d.promo_link);
-        chk('promo_enabled', d.promo_enabled !== undefined ? d.promo_enabled : true);
+        setVal('platform_url', d.platform_url);
+        setVal('promo_link', d.promo_link);
+        setChk('promo_enabled', d.promo_enabled ?? true);
 
-        chk('square_enabled', d.square_enabled !== undefined ? d.square_enabled : true);
-        set('scan_interval_seconds', d.scan_interval_seconds ?? 60);
-        set('timeframe', d.timeframe ?? '15m');
-        set('min_volume_usd', d.min_volume_usd ?? 10000);
-        set('candle_limit', d.candle_limit ?? 300);
-        set('top_n_symbols', d.top_n_symbols ?? 100);
-        chk('dynamic_scan', d.dynamic_scan !== undefined ? d.dynamic_scan : true);
-        set('exchanges', d.exchanges ?? 'binance,mexc,gateio,kucoin,okx');
+        setChk('square_enabled', d.square_enabled ?? true);
+        setVal('scan_interval_seconds', d.scan_interval_seconds ?? 60);
+        setVal('timeframe', d.timeframe ?? '15m');
+        setVal('min_volume_usd', d.min_volume_usd ?? 10000);
+        setVal('candle_limit', d.candle_limit ?? 300);
+        setVal('top_n_symbols', d.top_n_symbols ?? 100);
+        setChk('dynamic_scan', d.dynamic_scan ?? true);
+        setVal('exchanges', d.exchanges ?? 'binance,mexc,gateio,kucoin,okx');
 
         document.getElementById('intervalHint').textContent = d.scan_interval_seconds ?? 60;
 
@@ -613,38 +620,34 @@ document.getElementById('configForm').addEventListener('submit', async (e) => {
     statusEl.innerText = "Kaydediliyor...";
     statusEl.style.display = "block";
 
-    const val  = id => document.getElementById(id).value;
-    const chk  = id => document.getElementById(id).checked;
-    const num  = id => Number(document.getElementById(id).value);
-
     const config = {
-        admin_password: "proptrex2026",
-        tg_token: val('tg_token'),
-        tg_chat_id: val('tg_chat_id'),
-        tg_enabled: chk('tg_enabled'),
-        tw_api_key: val('tw_api_key'),
-        tw_api_secret: val('tw_api_secret'),
-        tw_access_token: val('tw_access_token'),
-        tw_access_secret: val('tw_access_secret'),
-        tw_enabled: chk('tw_enabled'),
-        ref_enabled: chk('ref_enabled'),
-        ref_every_n_signals: num('ref_every_n_signals'),
-        ref_binance: val('ref_binance'),
-        ref_mexc: val('ref_mexc'),
-        ref_gate: val('ref_gate'),
-        ref_kucoin: val('ref_kucoin'),
-        ref_okx: val('ref_okx'),
-        platform_url: val('platform_url'),
-        promo_link: val('promo_link'),
-        promo_enabled: chk('promo_enabled'),
-        scan_interval_seconds: num('scan_interval_seconds'),
-        timeframe: val('timeframe'),
-        candle_limit: num('candle_limit'),
-        min_volume_usd: num('min_volume_usd'),
-        top_n_symbols: num('top_n_symbols'),
-        dynamic_scan: chk('dynamic_scan'),
-        exchanges: val('exchanges'),
-        square_enabled: chk('square_enabled'),
+        admin_password: getVal('_admin_password') || 'proptrex2026',
+        tg_token: getVal('tg_token'),
+        tg_chat_id: getVal('tg_chat_id'),
+        tg_enabled: getChk('tg_enabled'),
+        tw_api_key: getVal('tw_api_key'),
+        tw_api_secret: getVal('tw_api_secret'),
+        tw_access_token: getVal('tw_access_token'),
+        tw_access_secret: getVal('tw_access_secret'),
+        tw_enabled: getChk('tw_enabled'),
+        ref_enabled: getChk('ref_enabled'),
+        ref_every_n_signals: getNum('ref_every_n_signals'),
+        ref_binance: getVal('ref_binance'),
+        ref_mexc: getVal('ref_mexc'),
+        ref_gate: getVal('ref_gate'),
+        ref_kucoin: getVal('ref_kucoin'),
+        ref_okx: getVal('ref_okx'),
+        platform_url: getVal('platform_url'),
+        promo_link: getVal('promo_link'),
+        promo_enabled: getChk('promo_enabled'),
+        scan_interval_seconds: getNum('scan_interval_seconds'),
+        timeframe: getVal('timeframe'),
+        candle_limit: getNum('candle_limit'),
+        min_volume_usd: getNum('min_volume_usd'),
+        top_n_symbols: getNum('top_n_symbols'),
+        dynamic_scan: getChk('dynamic_scan'),
+        exchanges: getVal('exchanges'),
+        square_enabled: getChk('square_enabled'),
     };
 
     try {

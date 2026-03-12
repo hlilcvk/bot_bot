@@ -328,8 +328,10 @@ def build_signal(
         side = "SHORT"
 
     if side == "NONE":
+        import os
+        debug_path = os.path.join(os.path.dirname(__file__), "bot_debug.txt")
         msg = f"{symbol} | struct={structure_bias}, buy={buyer_pct:.1f}, sell={seller_pct:.1f}, whale={whale_action}, mom={mom_bias}\n"
-        with open("bot_debug.txt", "a") as f:
+        with open(debug_path, "a") as f:
             f.write(msg)
         return None
 
