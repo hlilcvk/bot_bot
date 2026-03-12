@@ -120,7 +120,7 @@ class BotConfig(BaseModel):
     # Scanner runtime (overrides proptrex config)
     scan_interval_seconds: int = 60
     timeframe: str = "15m"
-    candle_limit: int = 300
+    candle_limit: int = 500
     min_volume_usd: float = 10000
     dynamic_scan: bool = True
     top_n_symbols: int = 100
@@ -431,7 +431,7 @@ def _compute_signals_sync(cfg: dict, engine: dict) -> dict:
     if timeframe not in _VALID_TIMEFRAMES:
         print(f"[scanner] invalid timeframe '{timeframe}', falling back to 15m")
         timeframe = "15m"
-    candle_limit = int(cfg.get("candle_limit", 300))
+    candle_limit = max(500, int(cfg.get("candle_limit", 500)))
     chart_bars = 140
     min_volume_usd = float(cfg.get("min_volume_usd", 10000))
     dynamic_scan = bool(cfg.get("dynamic_scan", True))

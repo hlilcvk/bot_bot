@@ -485,7 +485,7 @@
                         </div>
                         <div class="form-group">
                             <label>Mum Sayısı (candle_limit)</label>
-                            <input type="number" id="candle_limit" min="100" max="1000" value="300">
+                            <input type="number" id="candle_limit" min="500" max="1500" value="500">
                         </div>
                     </div>
                     <div class="row2">
@@ -600,7 +600,7 @@ async function loadSettings() {
         setVal('scan_interval_seconds', d.scan_interval_seconds ?? 60);
         setVal('timeframe', d.timeframe ?? '15m');
         setVal('min_volume_usd', d.min_volume_usd ?? 10000);
-        setVal('candle_limit', d.candle_limit ?? 300);
+        setVal('candle_limit', d.candle_limit ?? 500);
         setVal('top_n_symbols', d.top_n_symbols ?? 100);
         setChk('dynamic_scan', d.dynamic_scan ?? true);
         setVal('exchanges', d.exchanges ?? 'binance,mexc,gateio,kucoin,okx');
