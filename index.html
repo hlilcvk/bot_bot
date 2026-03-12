@@ -490,6 +490,17 @@
                     </div>
                     <div class="row2">
                         <div class="form-group">
+                            <label>Scan Başına Sinyal Sayısı</label>
+                            <input type="number" id="signals_per_scan" min="1" max="20" value="5">
+                        </div>
+                        <div class="form-group"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Hariç Tutulan Semboller (virgülle ayrılmış)</label>
+                        <input type="text" id="exclude_symbols" placeholder="USDC,PAXG,XAUT,EUR,GOLD...">
+                    </div>
+                    <div class="row2">
+                        <div class="form-group">
                             <label>Mum Sayısı (candle_limit)</label>
                             <input type="number" id="candle_limit" min="500" max="1500" value="500">
                         </div>
@@ -608,6 +619,8 @@ async function loadSettings() {
         setVal('timeframe', d.timeframe ?? '15m');
         setVal('min_volume_usd', d.min_volume_usd ?? 10000);
         setVal('min_opportunity_score', d.min_opportunity_score ?? 55);
+        setVal('signals_per_scan', d.signals_per_scan ?? 5);
+        setVal('exclude_symbols', d.exclude_symbols ?? 'USDC,USDT,FDUSD,TUSD,DAI,BUSD,USD1,XUSD,PAXG,XAUT,EUR,GBP,GOLD');
         setVal('candle_limit', d.candle_limit ?? 500);
         setVal('top_n_symbols', d.top_n_symbols ?? 100);
         setChk('dynamic_scan', d.dynamic_scan ?? true);
@@ -653,6 +666,8 @@ document.getElementById('configForm').addEventListener('submit', async (e) => {
         candle_limit: getNum('candle_limit'),
         min_volume_usd: getNum('min_volume_usd'),
         min_opportunity_score: getNum('min_opportunity_score'),
+        signals_per_scan: getNum('signals_per_scan'),
+        exclude_symbols: getVal('exclude_symbols'),
         top_n_symbols: getNum('top_n_symbols'),
         dynamic_scan: getChk('dynamic_scan'),
         exchanges: getVal('exchanges'),

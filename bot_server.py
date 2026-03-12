@@ -123,6 +123,8 @@ class BotConfig(BaseModel):
     candle_limit: int = 500
     min_volume_usd: float = 10000
     min_opportunity_score: float = 55.0
+    signals_per_scan: int = 5
+    exclude_symbols: str = "USDC,USDT,FDUSD,TUSD,DAI,BUSD,USD1,XUSD,PAXG,XAUT,EUR,GBP,GOLD"
     dynamic_scan: bool = True
     top_n_symbols: int = 100
     exchanges: str = "binance,mexc,gateio,kucoin,okx"
@@ -435,6 +437,9 @@ def _compute_signals_sync(cfg: dict, engine: dict) -> dict:
     candle_limit = max(500, int(cfg.get("candle_limit", 500)))
     chart_bars = 140
     min_volume_usd = float(cfg.get("min_volume_usd", 10000))
+    signals_per_scan = int(cfg.get("signals_per_scan", 5))
+    exclude_raw = cfg.get("exclude_symbols", "USDC,USDT,FDUSD,TUSD,DAI,BUSD,USD1,XUSD,PAXG,XAUT,EUR,GBP,GOLD")
+    exclude_set = {s.strip().upper() for s in exclude_raw.split(",") if s.strip()}
     dynamic_scan = bool(cfg.get("dynamic_scan", True))
     top_n = int(cfg.get("top_n_symbols", 100))
     dynamic_min_vol = 500000
@@ -517,17 +522,21 @@ def _compute_signals_sync(cfg: dict, engine: dict) -> dict:
         if signal is None:
             skipped_score += 1
             continue
+        base_symbol = signal.symbol.split("/")[0].upper()
+        if base_symbol in exclude_set:
+            skipped_score += 1
+            continue
         if signal.opportunity_score < min_score:
             below_min += 1
             continue
         ranked.append((signal.opportunity_score, signal, item.df))
 
     ranked.sort(key=lambda x: x[0], reverse=True)
-    top = ranked[:3]
+    top = ranked[:signals_per_scan]
     print(f"[scanner] scored — skipped_vol={skipped_vol} no_signal={skipped_score} "
           f"below_min={below_min} qualified={len(ranked)} sending_top={len(top)}")
 
-    # ── Enrich top 3 ─────────────────────────────────────────────────────────
+    # ── Enrich top signals ────────────────────────────────────────────────────
     items_out = []
     for _, signal, df in top:
         key = f"{signal.exchange}:{signal.symbol}:{signal.side}:{signal.status}"
