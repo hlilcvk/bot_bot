@@ -157,6 +157,8 @@ class RadarHTTPRequestHandler(SimpleHTTPRequestHandler):
             self.path = "/proptrex_radar/index.html"
         elif self.path == "/proptrex_radar":
             self.path = "/proptrex_radar/"
+        elif self.path.startswith("/assets/"):
+            self.path = f"/proptrex_radar{self.path}"
         elif self.path in ("/pricing", "/checkout", "/locked", "/radar"):
             self.path = f"{self.path}/"
         elif self.path in (
