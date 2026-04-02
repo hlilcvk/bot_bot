@@ -102,10 +102,10 @@
           HTTP/HTTPS altında reverse proxy varsa same-origin kullan.
           Dosya olarak (file://) açıldığında direct Binance endpoint'e düş.
         */
-        const FAPI_REST = SAME_ORIGIN || DIRECT_FAPI_REST;
+        const FAPI_REST = DIRECT_FAPI_REST;
         const FAPI_WS_BASE = SAME_ORIGIN_WS ? (SAME_ORIGIN_WS + '/stream?streams=') : DIRECT_FAPI_WS_BASE;
 
-        const DAPI_REST = SAME_ORIGIN || DIRECT_DAPI_REST;
+        const DAPI_REST = DIRECT_DAPI_REST;
         const DAPI_WS_BASE = SAME_ORIGIN_WS ? (SAME_ORIGIN_WS + '/stream?streams=') : DIRECT_DAPI_WS_BASE;
 
         // active endpoints (switchable)
