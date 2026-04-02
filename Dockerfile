@@ -21,8 +21,8 @@ RUN mkdir -p /app/data && chown -R radar:radar /app/data
 
 # No pip install needed – project uses only Python standard library
 
-# Switch to non-root user
-USER radar
+# Switch to non-root user (Disabled to avoid volume mount permission issues in Coolify for /app/data)
+# USER radar
 
 # Expose the application port
 EXPOSE 8000
