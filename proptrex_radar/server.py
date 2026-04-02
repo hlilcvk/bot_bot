@@ -2,6 +2,14 @@ from __future__ import annotations
 
 import json
 import mimetypes
+
+mimetypes.add_type("text/css", ".css")
+mimetypes.add_type("application/javascript", ".js")
+mimetypes.add_type("image/svg+xml", ".svg")
+mimetypes.add_type("image/png", ".png")
+mimetypes.add_type("image/jpeg", ".jpg")
+mimetypes.add_type("application/json", ".json")
+
 from http.cookies import SimpleCookie
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Dict, Tuple
@@ -64,7 +72,7 @@ class RadarHTTPRequestHandler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(PUBLIC_DIR), **kwargs)
 
     def log_message(self, format, *args):
-        pass
+        super().log_message(format, *args)
 
     def _route_path(self) -> str:
         return urlparse(self.path).path
