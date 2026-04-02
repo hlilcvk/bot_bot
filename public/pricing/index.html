@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PROPTREX Radar Pricing</title>
+  <style>
+    body { margin: 0; font-family: Inter, Segoe UI, Arial, sans-serif; background: #08111b; color: #eef5fb; }
+    .shell { max-width: 1120px; margin: 0 auto; padding: 32px 18px 48px; }
+    .top { display: flex; justify-content: space-between; gap: 16px; align-items: end; flex-wrap: wrap; }
+    h1 { margin: 0; font-size: clamp(32px, 5vw, 52px); }
+    p { color: #8ea2b6; line-height: 1.6; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 22px; }
+    .card { background: rgba(10, 20, 32, 0.92); border: 1px solid rgba(140,160,180,0.18); border-radius: 18px; padding: 18px; }
+    .name { font-size: 18px; font-weight: 800; }
+    .price { margin-top: 8px; font-size: 28px; font-weight: 800; }
+    ul { margin: 14px 0 0; padding-left: 18px; }
+    li { margin: 8px 0; color: #b8c9d8; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+    a { text-decoration: none; color: #07111b; background: #7fe5c8; padding: 10px 14px; border-radius: 999px; font-weight: 700; }
+    a.alt { color: #eef5fb; background: transparent; border: 1px solid rgba(140,160,180,0.18); }
+    .note { margin-top: 20px; padding: 14px 16px; border-left: 3px solid #7fe5c8; background: rgba(127,229,200,0.08); color: #d3e7dd; }
+    .meta { color: #8ea2b6; font-size: 13px; }
+    @media (max-width: 960px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="top">
+      <div>
+        <h1>Pricing</h1>
+        <p>Plan catalog comes from backend truth. Limits and features are not hardcoded into the UI.</p>
+      </div>
+      <div class="meta" id="accountMeta">loading account</div>
+    </div>
+    <div class="grid" id="planGrid"></div>
+    <div class="note" id="statusNote">loading catalog</div>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const accountId = params.get('account_id') || '';
+
+    function rows(plan) {
+      const ent = plan.entitlements || {};
+      return [
+        `Radar access: ${ent.can_access_radar ? 'enabled' : 'disabled'}`,
+        `AI summary: ${ent.can_use_ai_summary ? 'enabled' : 'disabled'}`,
+        `AI recommendations: ${ent.can_use_ai_recommendations ? 'enabled' : 'disabled'}`,
+        `Export: ${ent.can_export ? 'enabled' : 'disabled'}`,
+        `API: ${ent.can_use_api ? 'enabled' : 'disabled'}`,
+        `Alerts: ${ent.max_alerts ?? 0}`,
+        `Profiles: ${ent.max_profiles ?? 0}`,
+        `Workspaces: ${ent.max_workspaces ?? 0}`,
+        `History window: ${ent.history_window_days ?? 0} days`,
+      ];
+    }
+
+    async function boot() {
+      const [catalogResp, accessResp] = await Promise.all([
+        fetch('/api/access/catalog', { credentials: 'same-origin' }),
+        fetch(accountId ? `/api/access/me?account_id=${encodeURIComponent(accountId)}` : '/api/access/me', { credentials: 'same-origin' }),
+      ]);
+      const catalog = await catalogResp.json();
+      const access = await accessResp.json();
+      document.getElementById('accountMeta').textContent = access.account_id ? `Account ${access.account_id}` : 'Account unavailable';
+      const planGrid = document.getElementById('planGrid');
+      planGrid.innerHTML = '';
+      (catalog.plans || []).forEach((plan) => {
+        const card = document.createElement('section');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="name"></div>
+          <div class="price">Commercial access</div>
+          <div class="meta"></div>
+          <ul></ul>
+          <div class="actions">
+            <a class="cta">Checkout</a>
+            <a class="alt">Locked view</a>
+          </div>
+        `;
+        card.querySelector('.name').textContent = plan.label;
+        card.querySelector('.meta').textContent = plan.plan_code;
+        const list = card.querySelector('ul');
+        rows(plan).forEach((line) => {
+          const li = document.createElement('li');
+          li.textContent = line;
+          list.appendChild(li);
+        });
+        card.querySelector('.cta').href = accountId ? `/checkout/?account_id=${encodeURIComponent(accountId)}&plan_code=${encodeURIComponent(plan.plan_code)}` : `/checkout/?plan_code=${encodeURIComponent(plan.plan_code)}`;
+        card.querySelector('.alt').href = accountId ? `/locked/?account_id=${encodeURIComponent(accountId)}` : '/locked/';
+        planGrid.appendChild(card);
+      });
+      document.getElementById('statusNote').textContent = `Entitlement version ${catalog.entitlement_version || 'n/a'} | trial ${catalog.trial_days || 0} days | account ${access.account_id || 'n/a'}`;
+    }
+
+    boot().catch((error) => {
+      document.getElementById('statusNote').textContent = String(error);
+    });
+  </script>
+</body>
+</html>
+

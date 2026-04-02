@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
+    <meta name="description"
+        content="PROPTREX Futures Scanner — Institutional-grade crypto futures intelligence platform with real-time AI signals, whale detection, and cross-asset fusion engine." />
+    <meta name="author" content="PropTrex.com" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#111827" />
+    <meta property="og:title" content="PROPTREX Radar | Futures Intelligence Platform" />
+    <meta property="og:description"
+        content="Institutional-grade crypto futures scanner with AI signals, whale tracking, and cross-asset fusion." />
+    <meta property="og:type" content="website" />
+
+    <!-- ═══ PWA MANIFEST (inline) ═══ -->
+    <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22PROPTREX%20Radar%22%2C%22short_name%22%3A%22Radar%22%2C%22description%22%3A%22PROPTREX%20Radar%22%2C%22start_url%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23111827%22%2C%22theme_color%22%3A%22%23111827%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%20100'%3E%3Crect%20rx%3D'20'%20width%3D'100'%20height%3D'100'%20fill%3D'%23111827'%2F%3E%3Ctext%20x%3D'50'%20y%3D'68'%20text-anchor%3D'middle'%20fill%3D'%232563eb'%20font-family%3D'monospace'%20font-weight%3D'900'%20font-size%3D'48'%3EPX%3C%2Ftext%3E%3C%2Fsvg%3E%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%20maskable%22%7D%5D%7D" />
+
+    <!-- Apple / iOS PWA meta tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="PROPTREX Radar" />
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect rx='20' width='100' height='100' fill='%23111827'/%3E%3Ctext x='50' y='68' text-anchor='middle' fill='%232563eb' font-family='monospace' font-weight='900' font-size='48'%3EPX%3C/text%3E%3C/svg%3E" />
+
+    <!-- Windows / Android pinned tile -->
+    <meta name="msapplication-TileColor" content="#111827" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect rx='20' width='100' height='100' fill='%23111827'/%3E%3Ctext x='50' y='68' text-anchor='middle' fill='%232563eb' font-family='monospace' font-weight='900' font-size='48'%3EPX%3C/text%3E%3C/svg%3E" />
+
+    <title>PROPTREX Radar | Futures Intelligence Platform</title>
+    <link rel="stylesheet" href="assets/css/editor.css" />
+    
+    <link rel="stylesheet" href="assets/css/main.css" />
+
+</head>
+
+<body>
+    <div class="app">
+        <div class="scan"></div>
+        <!-- ═══ HEADER ═══ -->
+        <div class="hdr">
+            <div class="hdr-l">
+                <div class="logo-t">
+                    <div class="b">PROPTREX</div>
+                    <div class="s">Futures Intelligence V2</div>
+                </div>
+                <div class="live">
+                    <div class="live-d"></div><span id="hdrLive">LIVE SCANNING</span>
+                </div>
+            </div>
+            <div class="hdr-c">
+                <div class="hs"><span class="hs-l" id="hdrScanned">Scanned</span><span class="hs-v" id="xScan">0</span>
+                </div>
+                <div class="hs"><span class="hs-l" id="hdrAlerts">Alerts</span><span class="hs-v" id="xAlert"
+                        style="color:var(--red)">0</span></div>
+                <div class="hs"><span class="hs-l" id="hdrNew">New Listing</span><span class="hs-v" id="xNew"
+                        style="color:var(--green)">0</span></div>
+                <div class="hs"><span class="hs-l" id="hdrWh">Whale TX</span><span class="hs-v" id="xWh"
+                        style="color:var(--whale)">0</span></div>
+            </div>
+            <div class="hdr-r">
+                <input id="sinp" class="sinp" type="text" placeholder="Sembol ara…" aria-label="Search"
+                    style="height:32px;padding:0 10px;border-radius:8px;border:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:12px;width:180px;background:var(--card)" />
+                <button id="langBtn" onclick="setLang(LANG==='tr'?'en':'tr');location.reload();"
+                    style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:'IBM Plex Mono',monospace"
+                    title="EN/TR">EN</button>
+                <button onclick="(function(){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([document.documentElement.outerHTML],{type:'text/html'}));a.download='proptrex-futures.html';a.click();})()"
+                    style="background:#111827;color:#fff;border:1px solid #374151;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:'IBM Plex Mono',monospace;display:flex;align-items:center;gap:5px"
+                    title="HTML olarak indir">⬇ İndir</button>
+                <div class="bdg bdg-w" id="whBdg">🐋 <span id="whN">0</span></div>
+                <div class="bdg bdg-a" id="alBdg">0</div>
+                <button id="pxAdminOpen" style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:'IBM Plex Mono',monospace;display:flex;align-items:center;gap:5px;margin-left:6px" title="Settings">⚙ Settings</button>
+                <div class="clk" id="clk" style="margin-left:8px">--:--:--</div>
+            </div>
+        </div>
+        <!-- ═══ TABS ═══ -->
+        <div class="tabs" id="mainTabs">
+            <div class="tb" data-tb="fav">☆ Favorites</div>
+            <div class="tb on" data-tb="usdm">USDⓈ-M</div>
+            <div class="tb" data-tb="coinm">COIN-M</div>
+            <div class="tb-sep"></div>
+            <div class="tb" data-tb="trades">Trades</div>
+            <div class="tb" data-tb="movers">Top Movers</div>
+            <div class="tb" data-tb="top_24h_gainers">Top 24H Gainers</div>
+            <div class="tb" data-tb="bot">🤖 Bot Center</div>
+        </div>
+        <!-- ═══ CATEGORIES ═══ -->
+        <div class="cats" id="catRow">
+            <button class="ct on" data-c="all">All</button>
+            <button class="ct nl" data-c="new">New Listing<span class="nd"></span></button>
+            <button class="ct" data-c="tradfi">TradFi</button>
+            <button class="ct" data-c="premarket">Pre-Market</button>
+            <button class="ct" data-c="usdc">USDC</button>
+            <button class="ct" data-c="chinese">Chinese</button>
+            <button class="ct" data-c="alpha">Alpha</button>
+            <button class="ct" data-c="ai">AI</button>
+            <button class="ct" data-c="etf">ETF</button>
+            <button class="ct" data-c="l1">Layer-1</button>
+            <button class="ct" data-c="rwa">RWA</button>
+            <button class="ct" data-c="l2">Layer-2</button>
+            <button class="ct" data-c="gaming">Gaming</button>
+            <button class="ct" data-c="meme">Meme</button>
+            <button class="ct" data-c="infra">Infrastructure</button>
+            <button class="ct" data-c="defi">DeFi</button>
+            <button class="ct" data-c="meta">Metaverse</button>
+        </div>
+        <!-- ═══ TOP MOVERS ═══ -->
+        <div class="mvr" id="moverRow">
+            <span class="ml">Top Movers:</span>
+            <button class="mb on" data-m="all">All</button>
+            <button class="mb" data-m="rise">Rise</button>
+            <button class="mb" data-m="fall">Fall</button>
+            <button class="mb" data-m="pullback">Pullback</button>
+            <button class="mb" data-m="rally">Rally</button>
+            <button class="mb" data-m="newhigh">New High</button>
+            <button class="mb" data-m="newlow">New Low</button>
+            <button class="mb" data-m="volup">Price Up with High Vol</button>
+            <button class="mb" data-m="voldn">Price Down with High Vol</button>
+            <button class="mb" data-m="whale">🐋 Whale Activity</button>
+        </div>
+        <!-- ═══ SIGNALS (Moved to Settings) ═══ -->
+        <div class="sigs" id="signalRow" style="display:none">
+            <!-- TA Signals now in Settings Panel -->
+        </div>
+        <!-- ═══ TICKER ═══ -->
+        <div class="tkr" id="tickerRow">
+            <div class="tk">
+                <div class="tv" id="tBtc" style="color:var(--ydark)">$67,532.59</div>
+                <div class="tl">BTC/FDUSD</div>
+            </div>
+            <div class="tk">
+                <div class="tv" id="tEth" style="color:var(--blue)">$2,032.25</div>
+                <div class="tl">ETH/FDUSD</div>
+            </div>
+            <div class="tk">
+                <div class="tv" id="tBnb">$626.19</div>
+                <div class="tl">BNB/FDUSD</div>
+            </div>
+            <div class="tk">
+                <div class="tv" id="tMcap">--</div>
+                <div class="tl">Total M.Cap</div>
+            </div>
+            <div class="tk">
+                <div class="tv" id="tDom">--%</div>
+                <div class="tl">BTC Dominance</div>
+            </div>
+            <div class="tk">
+                <div class="tv" id="tFg" style="color:var(--green)">--</div>
+                <div class="tl">Fear &amp; Greed</div>
+            </div>
+            <div class="tk">
+                <div class="tv" id="tWv" style="color:var(--whale)">$0</div>
+                <div class="tl">🐋 Whale Volume</div>
+            </div>
+        </div>
+        <!-- ═══ LIVE MARKET INTELLIGENCE ═══ -->
+        <div class="intl" id="intlBlock">
+            <span class="intl-t">⚡ LIVE MARKET STRUCTURE</span>
+            <div class="intl-i"><span class="intl-k">Crypto Bias</span><span class="intl-v" id="intBias">—</span></div>
+            <div class="intl-i"><span class="intl-k">Fund Avg</span><span class="intl-v" id="intFundAvg">—</span></div>
+            <div class="intl-i"><span class="intl-k">OI Δ</span><span class="intl-v" id="intOIDelta">—</span></div>
+            <div class="intl-i"><span class="intl-k">Vol Regime</span><span class="intl-v" id="intRegime">—</span></div>
+            <div class="intl-i"><span class="intl-k">SQZ Active</span><span class="intl-v" id="intSqzCount"
+                    style="color:#d97706">0</span></div>
+            <div class="intl-i"><span class="intl-k">TRAP Alert</span><span class="intl-v" id="intTrapCount"
+                    style="color:#ef4444">0</span></div>
+            <span class="fusion-badge active" id="fusionBadge">🔥 Cross-Asset Fusion</span>
+            <span class="voice-ind" id="voiceToggle" title="Voice Alerts">🔊 Voice</span>
+        </div>
+        <!-- ═══ BOT CENTER ═══ -->
+        <div class="botp" id="botPanel" style="display:none">
+            <div class="botp-top">
+                <div>
+                    <div class="botp-title">Multi-Exchange Bot Center</div>
+                    <div class="botp-sub">Binance · MEXC · Gate.io · KuCoin / Spot + Futures feed control</div>
+                </div>
+                <div class="botp-statline">
+                    <span class="bot-badge" id="botConnBadge">OFFLINE</span>
+                    <span class="bot-mini">Events <b id="botEventCount">0</b></span>
+                    <span class="bot-mini">Snapshot <b id="botSnapshotCount">0</b></span>
+                    <span class="bot-mini">Last <b id="botLastEvent">—</b></span>
+                </div>
+            </div>
+            <div class="botp-grid">
+                <div class="botc botc-wide">
+                    <div class="botc-h">Hot-Money Overview</div>
+                    <div class="bot-sum" id="botSummary">
+                        <div class="bot-sum-item"><span>Pre-Pump</span><b id="botPreCount">0</b></div>
+                        <div class="bot-sum-item"><span>Triggered</span><b id="botTriggeredCount">0</b></div>
+                        <div class="bot-sum-item"><span>Active Run</span><b id="botActiveRunCount">0</b></div>
+                        <div class="bot-sum-item"><span>Exhaustion</span><b id="botExhaustionCount">0</b></div>
+                        <div class="bot-sum-item"><span>Avg Score</span><b id="botAvgScore">0</b></div>
+                        <div class="bot-sum-item"><span>Net Inflow</span><b id="botInflowUsd">$0</b></div>
+                    </div>
+                    <div class="bot-chip-row">
+                        <span class="bot-chip" id="botProfileChip">PROFILE: AGGRESSIVE</span>
+                        <span class="bot-chip good" id="botHealthChip">HEALTH: UNKNOWN</span>
+                        <span class="bot-chip" id="botHotChip">HOT MONEY: 0</span>
+                        <span class="bot-chip warn" id="botPersistChip">PERSIST: 75s</span>
+                        <span class="bot-chip" id="botReconnectChip">AUTO RECONNECT: ON</span>
+                    </div>
+                </div>
+                <div class="botc" style="display:none">
+                    <div class="botc-h">Connection</div>
+                    <label class="botf-l">Base URL</label>
+                    <input class="botf-i" id="botBaseUrl" type="text" value="" aria-label="Telegram base URL" />
+                    <label class="botf-l">WS URL</label>
+                    <input class="botf-i" id="botWsUrl" type="text" value="" aria-label="Telegram WS URL" />
+                    <div class="bot-actions">
+                        <button class="bot-btn pri" id="botConnectBtn">Connect</button>
+                        <button class="bot-btn" id="botSnapshotBtn">Snapshot</button>
+                        <button class="bot-btn" id="botHealthBtn">Health</button>
+                        <button class="bot-btn" id="botDisconnectBtn">Stop</button>
+                        <button class="bot-btn" id="botSaveBtn">Save</button>
+                    </div>
+                    <div class="bot-healthline" id="botHealthLine">Backend health henüz test edilmedi.</div>
+                </div>
+                <div class="botc">
+                    <div class="botc-h">Exchange Filters</div>
+                    <div class="botx-grid">
+                        <label class="botx"><input type="checkbox" id="bx-binance-spot" checked /> Binance Spot</label>
+                        <label class="botx"><input type="checkbox" id="bx-binance-futures" checked /> Binance Futures</label>
+                        <label class="botx"><input type="checkbox" id="bx-mexc-spot" checked /> MEXC Spot</label>
+                        <label class="botx"><input type="checkbox" id="bx-mexc-futures" checked /> MEXC Futures</label>
+                        <label class="botx"><input type="checkbox" id="bx-gate-spot" checked /> Gate Spot</label>
+                        <label class="botx"><input type="checkbox" id="bx-gate-futures" checked /> Gate Futures</label>
+                        <label class="botx"><input type="checkbox" id="bx-kucoin-spot" checked /> KuCoin Spot</label>
+                        <label class="botx"><input type="checkbox" id="bx-kucoin-futures" checked /> KuCoin Futures</label>
+                    </div>
+                    <div class="bot-chip-row">
+                        <label class="botx" style="width:100%;justify-content:space-between"><span>Auto Reconnect</span><input type="checkbox" id="botAutoReconnect" checked /></label>
+                    </div>
+                </div>
+                <div class="botc">
+                    <div class="botc-h">Detection Profile</div>
+                    <label class="botf-l" for="botProfile">Profile</label>
+                    <select class="bot-select" id="botProfile">
+                        <option value="aggressive">Aggressive</option>
+                        <option value="balanced">Balanced</option>
+                        <option value="conservative">Conservative</option>
+                    </select>
+                    <div class="bot-subgrid">
+                        <div>
+                            <label class="botf-l" for="botMinNotional">Min Notional</label>
+                            <input class="botf-i" id="botMinNotional" type="number" min="0" step="1000" value="25000" />
+                        </div>
+                        <div>
+                            <label class="botf-l" for="botMinConfidence">Min Confidence</label>
+                            <input class="botf-i" id="botMinConfidence" type="number" min="0" max="100" step="1" value="70" />
+                        </div>
+                    </div>
+                    <div class="bot-subgrid">
+                        <div>
+                            <label class="botf-l" for="botMinHotScore">Min Hot Score</label>
+                            <input class="botf-i" id="botMinHotScore" type="number" min="0" max="100" step="1" value="65" />
+                        </div>
+                        <div>
+                            <label class="botf-l" for="botCooldown">Cooldown (sec)</label>
+                            <input class="botf-i" id="botCooldown" type="number" min="0" step="1" value="45" />
+                        </div>
+                    </div>
+                    <div class="bot-note" id="botCfgNote">Settings are stored locally in this panel and pushed to hosted bot subscriptions when possible.</div>
+                </div>
+                <div class="botc botc-wide">
+                    <div class="botc-h">Advanced Pump / Hot-Money Rules</div>
+                    <div class="botp-grid" style="grid-template-columns:repeat(12,minmax(0,1fr));gap:12px">
+                        <div class="botc" style="grid-column:span 4;box-shadow:none">
+                            <label class="bot-kv tight" for="botMinVolMult"><span>Min Vol Mult</span><input class="bot-num" id="botMinVolMult" type="number" min="0" step="0.1" value="2.5" /></label>
+                            <label class="bot-kv tight" for="botMinPriceMove1m"><span>Min 1m Move %</span><input class="bot-num" id="botMinPriceMove1m" type="number" min="0" step="0.1" value="0.8" /></label>
+                        </div>
+                        <div class="botc" style="grid-column:span 4;box-shadow:none">
+                            <label class="bot-kv tight" for="botMinBuyRatio"><span>Min Buy Ratio %</span><input class="bot-num" id="botMinBuyRatio" type="number" min="0" max="100" step="1" value="54" /></label>
+                            <label class="bot-kv tight" for="botMinOBI"><span>Min OBI</span><input class="bot-num" id="botMinOBI" type="number" min="0" step="0.01" value="0.12" /></label>
+                        </div>
+                        <div class="botc" style="grid-column:span 4;box-shadow:none">
+                            <label class="bot-kv tight" for="botMinOIDeltaPct"><span>Min OI Δ %</span><input class="bot-num" id="botMinOIDeltaPct" type="number" min="0" step="0.1" value="0.4" /></label>
+                            <label class="bot-kv tight" for="botPersistenceSec"><span>Persistence sec</span><input class="bot-num" id="botPersistenceSec" type="number" min="0" step="1" value="75" /></label>
+                        </div>
+                    </div>
+                </div>
+                <div class="botc">
+                    <div class="botc-h">Router Stats</div>
+                    <div class="bot-metrics">
+                        <div class="bot-m"><span>Symbols</span><b id="botSymbolCount">0</b></div>
+                        <div class="bot-m"><span>Channels</span><b id="botChannelCount">0</b></div>
+                        <div class="bot-m"><span>REST</span><b id="botRestState">idle</b></div>
+                        <div class="bot-m"><span>WS</span><b id="botWsState">idle</b></div>
+                    </div>
+                </div>
+                <div class="botc botc-wide">
+                    <div class="botc-h">PUMP BOT LIVE SCANNER</div>
+                    <div class="scan-cont" id="botScanner"></div>
+                </div>
+            </div>
+        </div>
+        <!-- ═══ MAIN ═══ -->
+        <div class="mn" id="mainPanel">
+            <div class="tp" id="mainTablePanel">
+                <div class="tw">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:24px"></th>
+                                <th>Symbols / Vol <span class="si">⇅</span></th>
+                                <th>Last Price <span class="si">⇅</span></th>
+                                <th>24h Chg <span class="si">⇅</span></th>
+                                <th>M.Cap</th>
+                                <th>Funding Rate <span class="si">⇅</span></th>
+                                <th>RSI(14)</th>
+                                <th>MACD</th>
+                                <th>OI Δ%</th>
+                                <th>SQZ</th>
+                                <th>TRAP</th>
+                                <th>REG</th>
+                                <th>FIB</th>
+                                <th>GAP</th>
+                                <th>🐋 Whale</th>
+                                <th>Social</th>
+                                <th>Exchanges</th>
+                                <th>Category</th>
+                                <th>Listed</th>
+                                <th style="width:56px"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbl"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tp" id="topGainersPanel" style="display:none">
+                <div class="tw">
+                    <table class="top-gainers-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Symbol</th>
+                                <th>Price</th>
+                                <th>24h %</th>
+                                <th>Volume</th>
+                                <th>Exchange</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topGainersBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="sp">
+                <!-- Alerts -->
+                <div class="ss" data-panel-id="alerts">
+                    <div class="sh">⚡ Alerts <span class="cn" id="aCn">0</span></div>
+                    <div class="all" id="aList" style="max-height:240px;overflow-y:auto"></div>
+                </div>
+                <div class="ss" data-panel-id="events">
+                    <div class="sh" id="lbl-upcoming">🚀 Yaklaşan Etkinlikler <span class="cn" id="evtCn">0</span></div>
+                    <div class="upl" id="upList" style="max-height:240px;overflow-y:auto"></div>
+                </div>
+                <div class="ss" data-panel-id="whales">
+                    <div class="sh">🐋 Whale Activity <span class="cn" id="wCn">0</span></div>
+                    <div class="whl" id="wList" style="max-height:240px;overflow-y:auto"></div>
+                </div>
+            </div>
+        </div>
+        <!-- ═══ V8 TOKEN MODAL ═══ -->
+        <div class="movl" id="movl"></div>
+        <div class="modal" id="modal">
+            <!-- Header -->
+            <div class="mhdr">
+                <div class="mhdr-l">
+                    <div>
+                        <div class="mhdr-sym" id="mSym">—</div>
+                        <div class="mhdr-sub" id="mSub">—</div>
+                    </div>
+                </div>
+                <div class="mhdr-c">
+                    <span class="mhdr-price" id="mPrice">—</span>
+                    <span class="mhdr-chg nt" id="mChg">0.00%</span>
+                </div>
+                <div class="mhdr-r">
+                    <button class="mhdr-btn" id="mClose" title="Kapat (Esc)">✕</button>
+                </div>
+            </div>
+            <!-- Tab bar -->
+            <div class="mtabs" id="mTabBar">
+                <div class="mtab on" data-mtab="chart"><span class="mtab-icon">📊</span> <span
+                        class="mtab-txt">Chart</span></div>
+                <div class="mtab" data-mtab="technical"><span class="mtab-icon">📐</span> <span
+                        class="mtab-txt">Technical</span></div>
+                <div class="mtab" data-mtab="whale"><span class="mtab-icon">🐋</span> <span
+                        class="mtab-txt">Whale</span></div>
+                <div class="mtab" data-mtab="news"><span class="mtab-icon">📰</span> <span class="mtab-txt">News</span>
+                </div>
+            </div>
+            <!-- Body -->
+            <div class="mbody">
+                <!-- ═══ LEFT: Main content per tab ═══ -->
+                <div class="mmain" id="mMain">
+                    <!-- CHART TAB -->
+                    <div class="mtab-content on" id="mtc-chart">
+                        <div class="mchart-wrap">
+                            <div class="mchart" id="mChart"></div>
+                            <div class="mchart-tf" id="mTfRow">
+                                <button class="mchart-tfb on" data-iv="1m">1m</button>
+                                <button class="mchart-tfb" data-iv="3m">3m</button>
+                                <button class="mchart-tfb" data-iv="5m">5m</button>
+                                <button class="mchart-tfb" data-iv="15m">15m</button>
+                                <button class="mchart-tfb" data-iv="1h">1h</button>
+                                <button class="mchart-tfb" data-iv="4h">4h</button>
+                                <button class="mchart-tfb" data-iv="1d">1d</button>
+                            </div>
+                        </div>
+                        <div class="mchart-dash" id="mDash">
+                            <div class="mchart-dash-title" id="dashTitle">—</div>
+                            <div class="mchart-dash-row"><span>RSI(14)</span><span id="dashRSI">—</span></div>
+                            <div class="mchart-dash-row"><span>MACD</span><span id="dashMACD">—</span></div>
+                            <div class="mchart-dash-row"><span>Hist</span><span id="dashHIST">—</span></div>
+                            <div class="mchart-dash-row"><span>TF</span><span id="dashTF">—</span></div>
+                        </div>
+                        <div class="malert-reason" id="mAlertWrap" style="display:none">
+                            <div class="malert-reason-h">Alert Reason</div>
+                            <div class="malert-reason-v" id="mAlertReason">—</div>
+                        </div>
+                    </div>
+                    <!-- TECHNICAL TAB -->
+                    <div class="mtab-content" id="mtc-technical">
+                        <div id="mTAList"></div>
+                    </div>
+                    <!-- WHALE TAB -->
+                    <div class="mtab-content" id="mtc-whale">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                            <span style="font-weight:700;font-size:14px" id="mWhaleTitle">🐋 Whale Activity</span>
+                            <label for="mWhaleFilter" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);margin:0;padding:0;">Whale filter</label>
+                            <select id="mWhaleFilter"
+                                style="font-size:12px;padding:4px 8px;border-radius:8px;border:1px solid rgba(17,24,39,0.08)">
+                                <option value="60">1h</option>
+                                <option value="10">10m</option>
+                                <option value="1440">24h</option>
+                            </select>
+                        </div>
+                        <div class="mwhale-list" id="mWhaleList"></div>
+                    </div>
+                    <!-- NEWS TAB -->
+                    <div class="mtab-content" id="mtc-news">
+                        <div id="mNewsList">
+                            <div style="color:rgba(17,24,39,0.45);font-size:13px">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- ═══ RIGHT: Side panel cards ═══ -->
+                <div class="mside" id="mSide">
+                    <!-- Card 1: Market Data -->
+                    <div class="mcard">
+                        <div class="mcard-h" id="mch1">Market Data</div>
+                        <div class="mcard-grid">
+                            <div class="mcard-kv">
+                                <div class="mcard-k" id="mck-vol">24h Volume</div>
+                                <div class="mcard-v" id="mcVol">—</div>
+                            </div>
+                            <div class="mcard-kv">
+                                <div class="mcard-k" id="mck-fund">Funding</div>
+                                <div class="mcard-v" id="mcFund">—</div>
+                            </div>
+                            <div class="mcard-div"></div>
+                            <div class="mcard-kv">
+                                <div class="mcard-k" id="mck-24h">24h Change</div>
+                                <div class="mcard-v" id="mc24h">—</div>
+                            </div>
+                            <div class="mcard-kv">
+                                <div class="mcard-k">RSI(14)</div>
+                                <div class="mcard-v" id="mcRsi">—</div>
+                            </div>
+                            <div class="mcard-div"></div>
+                            <div class="mcard-kv">
+                                <div class="mcard-k" id="mck-ls">Long/Short</div>
+                                <div class="mcard-v" id="mcLS">—</div>
+                            </div>
+                            <div class="mcard-kv">
+                                <div class="mcard-k" id="mck-bs">Buy/Sell</div>
+                                <div class="mcard-v" id="mcBS">—</div>
+                            </div>
+                        </div>
+                        <div style="margin-top:8px">
+                            <div class="mheat-bar">
+                                <div class="mheat-fill" id="mcHeat" style="width:50%"></div>
+                            </div>
+                            <div class="mheat-txt"><span id="mcHeatL">Long —</span><span id="mcHeatR">Short —</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 2: AI Intelligence -->
+                    <div class="mcard">
+                        <div class="mcard-h" id="mch2">AI Intelligence</div>
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                            <span style="font-size:12px;color:rgba(17,24,39,0.45)" id="mck-sig">Signal</span>
+                            <span class="msig msig-hold" id="mcSignal">HOLD</span>
+                            <span style="font-size:12px;color:rgba(17,24,39,0.45);margin-left:auto"
+                                id="mck-conf">Confidence</span>
+                            <span style="font-weight:700;font-size:13px" id="mcConf">—</span>
+                        </div>
+                        <div style="font-size:11px;color:rgba(17,24,39,0.45);margin-bottom:4px" id="mck-dip">DIP Score
+                        </div>
+                        <div class="mdip-bar">
+                            <div class="mdip-fill" id="mcDip" style="width:50%;background:#2563eb"></div>
+                        </div>
+                        <div class="mcard-grid" style="margin-top:10px">
+                            <div class="mcard-kv">
+                                <div class="mcard-k" id="mck-entry">Entry</div>
+                                <div class="mcard-v" id="mcEntry">—</div>
+                            </div>
+                            <div class="mcard-kv">
+                                <div class="mcard-k" id="mck-sl">Stop Loss</div>
+                                <div class="mcard-v" id="mcSL">—</div>
+                            </div>
+                            <div class="mcard-kv">
+                                <div class="mcard-k">TP1</div>
+                                <div class="mcard-v" id="mcTP1">—</div>
+                            </div>
+                            <div class="mcard-kv">
+                                <div class="mcard-k">TP2</div>
+                                <div class="mcard-v" id="mcTP2">—</div>
+                            </div>
+                            <div class="mcard-div"></div>
+                            <div class="mcard-kv">
+                                <div class="mcard-k">R:R</div>
+                                <div class="mcard-v" id="mcRR">—</div>
+                            </div>
+                            <div class="mcard-kv">
+                                <div class="mcard-k" id="mck-trend">Trend</div>
+                                <div class="mcard-v" id="mcTrend">—</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 3: Risk Model -->
+                    <div class="mcard">
+                        <div class="mcard-h" id="mch3">Risk Model</div>
+                        <div class="mcard-grid">
+                            <div class="mcard-kv">
+                                <div class="mcard-k" id="mck-risk">Risk</div>
+                                <div class="mcard-v" id="mcRisk" style="color:#16a34a">Low</div>
+                            </div>
+                            <div class="mcard-kv">
+                                <div class="mcard-k" id="mck-lev">Leverage</div>
+                                <div class="mcard-v" id="mcLev">—</div>
+                            </div>
+                        </div>
+                        <div style="margin-top:6px">
+                            <div style="font-size:11px;color:rgba(17,24,39,0.45);margin-bottom:3px" id="mck-liq">Liq.
+                                Proximity</div>
+                            <div class="mrisk-bar" style="background:rgba(17,24,39,0.06)">
+                                <div class="mrisk-fill" id="mcLiq"
+                                    style="width:80%;background:linear-gradient(90deg,#16a34a,#f59e0b)"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 4: Links -->
+                    <div class="mcard">
+                        <div class="mcard-h" id="mch4">Links</div>
+                        <div class="mlinks">
+                            <a class="mlink" id="mlBinance" target="_blank" rel="noopener">Binance</a>
+                            <a class="mlink" id="mlTV" target="_blank" rel="noopener">TradingView</a>
+                            <a class="mlink" id="mlCG" target="_blank" rel="noopener">CoinGecko</a>
+                            <a class="mlink" id="mlCMC" target="_blank" rel="noopener">CMC</a>
+                            <a class="mlink" href="#" id="mlCopy" role="button">📋 Copy</a>
+                        </div>
+                    </div>
+                    <!-- Card 5: Prop Firm Mode -->
+                    <div class="mcard pfm">
+                        <div class="pfm-h">⚡ Prop Firm Mode</div>
+                        <div class="pfm-row"><label for="pfAcc">Account</label><input id="pfAcc" type="number" value="100000"
+                                step="1000"></div>
+                        <div class="pfm-row"><label for="pfRisk">Risk %</label><input id="pfRisk" type="number" value="1" step="0.1"
+                                min="0.1" max="10"></div>
+                        <div class="pfm-row"><label for="pfLev">Leverage</label><select id="pfLev">
+                                <option>1x</option>
+                                <option>2x</option>
+                                <option>3x</option>
+                                <option selected>5x</option>
+                                <option>10x</option>
+                                <option>20x</option>
+                                <option>50x</option>
+                            </select></div>
+                        <div class="pfm-res" id="pfResult">Position: — | Risk: —</div>
+                        <div id="pfDrawdown" style="margin-top:4px;font-size:10px;color:rgba(17,24,39,0.45)"></div>
+                    </div>
+                    <!-- Card 6: Signal Breakdown -->
+                    <div class="mcard">
+                        <div class="mcard-h">Signal Breakdown</div>
+                        <div class="sig-break" id="mcSigBreak"></div>
+                        <div style="margin-top:8px;padding:8px;background:rgba(17,24,39,0.02);border-radius:8px;font-size:11px"
+                            id="mcWhySignal"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ═══ BOTTOM TICKER ═══ -->
+        <div class="btk" id="bTick"></div>
+        <!-- ═══ COPYRIGHT ═══ -->
+        <div class="cpf">
+            <div>© 2024–2026 <a href="https://proptrex.com" target="_blank" rel="noopener">PropTrex.com</a> — All Rights
+                Reserved. PROPTREX™ is a registered trademark.</div>
+            <div class="cpf-warn">This software and all associated intellectual property, including but not limited to
+                source code, algorithms, data models, data processing engines, UI/UX design, and documentation, are the
+                exclusive property of PropTrex.com. Unauthorized reproduction, distribution, modification, reverse
+                engineering, decompilation, or any form of copying — in whole or in part — is strictly prohibited and
+                may result in civil and criminal penalties under applicable copyright and intellectual property laws.
+                Use of this platform constitutes acceptance of our <a href="https://proptrex.com/terms" target="_blank"
+                    rel="noopener">Terms of Service</a> and <a href="https://proptrex.com/privacy" target="_blank"
+                    rel="noopener">Privacy Policy</a>. Trading involves substantial risk — past performance does not
+                guarantee future results. Not financial advice.</div>
+        </div>
+    </div>
+    <script defer src="assets/js/vendor/lightweight-charts.standalone.production.js"></script>
+    
+
+
+
+<div class="px-toast-container" id="pxToastBox"></div>
+
+<!-- ═══ PWA INSTALL BANNER ═══ -->
+<div id="pxInstallBanner" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:99999;
+  background:#111827;border:1px solid #2563eb;border-radius:14px;padding:12px 18px;
+  align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.45);
+  font-family:'IBM Plex Mono',monospace;font-size:12px;color:#fff;min-width:300px;max-width:90vw;">
+    <div style="width:36px;height:36px;background:#111827;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid #2563eb">
+    <span style="font-family:'IBM Plex Mono',monospace;font-weight:900;font-size:12px;color:#2563eb;letter-spacing:0">PX</span>
+  </div>
+  <div style="flex:1">
+    <div style="font-weight:800;font-size:13px;color:#fff">PROPTREX'i Yükle</div>
+    <div style="color:rgba(255,255,255,.55);font-size:11px;margin-top:2px">Ana ekrana / kısayola ekle</div>
+  </div>
+  <button id="pxInstallBtn" style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:'IBM Plex Mono',monospace;flex-shrink:0">Yükle</button>
+  <button id="pxInstallDismiss" style="background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:16px;padding:0 4px;flex-shrink:0">✕</button>
+</div>
+
+</div>
+
+<!-- ═══ SETTINGS (ADMIN) PANEL ═══ -->
+<div class="px-admin-overlay" id="pxAdminOverlay"></div>
+<div class="px-admin-panel" id="pxAdminPanel">
+  <div class="px-admin-hdr">
+    <div class="px-admin-title">⚙ Settings & Filters</div>
+    <button class="px-admin-close" id="pxAdminClose">✕</button>
+  </div>
+  <div class="px-admin-body">
+    <!-- Sinyal Filtreleri (filter-toolbar.js tarafından doldurulur) -->
+    <div class="px-admin-sec" style="grid-column:1/-1">
+      <h5>Sinyal Filtreleri</h5>
+      <div id="pxSettingsFilterZone" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center"></div>
+    </div>
+
+    <!-- TA Sinyalleri (Ana ekrandan buraya taşındı) -->
+    <div class="px-admin-sec" style="grid-column:1/-1">
+      <h5>TA Sinyalleri</h5>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+        <button class="sb" data-s="rsiob" style="padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:11px">RSI &gt;70</button>
+        <button class="sb" data-s="rsios" style="padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:11px">RSI &lt;30</button>
+        <button class="sb" data-s="macdup" style="padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:11px">MACD ↑</button>
+        <button class="sb" data-s="macddn" style="padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:11px">MACD ↓</button>
+        <button class="sb" data-s="gap" style="padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:11px">GAP</button>
+        <button class="sb" data-s="fib" style="padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:11px">FIB 0.618</button>
+        <button class="sb" data-s="whale" style="padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:11px">🐋 Balina</button>
+      </div>
+    </div>
+
+    <!-- Eski ayarlar veya notlar -->
+    <div class="px-admin-note" style="margin-top:16px;padding:12px;background:rgba(37,99,235,0.05);border-radius:8px;font-size:11px;color:#2563eb">
+      UI ayarları ve filtreler burada saklanır. Ayarlarınız yerel ("local storage") olarak cihazınızda tutulur.
+    </div>
+  </div>
+</div>
+
+<script>
+  // Settings Panel Aç/Kapa mantığı
+  document.addEventListener('DOMContentLoaded', () => {
+    const btnOpen = document.getElementById('pxAdminOpen');
+    const panel = document.getElementById('pxAdminPanel');
+    const overlay = document.getElementById('pxAdminOverlay');
+    const btnClose = document.getElementById('pxAdminClose');
+
+    if(btnOpen && panel && overlay) {
+      btnOpen.addEventListener('click', () => {
+        panel.classList.add('on');
+        overlay.classList.add('on');
+      });
+      btnClose.addEventListener('click', () => {
+        panel.classList.remove('on');
+        overlay.classList.remove('on');
+      });
+      overlay.addEventListener('click', () => {
+        panel.classList.remove('on');
+        overlay.classList.remove('on');
+      });
+    }
+  });
+
+  // Delegated events for the relocated TA Sinyalleri
+  document.addEventListener('click', (e) => {
+    const target = e.target.closest('.px-admin-sec .sb');
+    if(target) {
+      target.classList.toggle('on');
+      if (typeof window.Z !== 'undefined' && window.typeof_rerenderTable !== 'undefined') {
+        const key = target.getAttribute('data-s');
+        if (key && window.PROPTREX_APP && window.PROPTREX_APP.rerenderTable) {
+           window.PROPTREX_APP.rerenderTable(); // trigger re-eval if app handles it
+        }
+      }
+    }
+  });
+</script>
+
+
+    <script src="assets/js/app-core.js"></script>
+<script type="module" src="assets/js/bootstrap.js"></script>
+</body>
+</html>

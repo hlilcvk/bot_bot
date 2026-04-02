@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PROPTREX Radar Checkout</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      background: linear-gradient(180deg, #07111b, #091521);
+      color: #eef5fb;
+    }
+
+    .shell {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 18px 48px;
+    }
+
+    .card {
+      background: rgba(10, 20, 32, 0.92);
+      border: 1px solid rgba(140, 160, 180, 0.18);
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: clamp(32px, 5vw, 52px);
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 6px;
+      color: #9fb3c7;
+    }
+
+    select,
+    input,
+    button,
+    a {
+      font: inherit;
+    }
+
+    select,
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(140, 160, 180, 0.22);
+      background: #09111b;
+      color: #eef5fb;
+    }
+
+    button,
+    a.btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 14px;
+      padding: 12px 16px;
+      border-radius: 999px;
+      border: 0;
+      text-decoration: none;
+      color: #07111b;
+      background: #7fe5c8;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .meta {
+      color: #9fb3c7;
+      margin-top: 10px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .alt {
+      color: #eef5fb;
+      background: transparent;
+      border: 1px solid rgba(140, 160, 180, 0.18);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="shell">
+    <section class="card">
+      <h1>Checkout</h1>
+      <p>Checkout creation is routed through the configured billing provider. If no provider is set, the page reports
+        the unavailable dependency exactly.</p>
+      <label for="planCode">Plan</label>
+      <select id="planCode"></select>
+      <div class="actions">
+        <button id="createCheckout">Create checkout session</button>
+        <button id="openPortal" class="alt">Open portal</button>
+        <a class="btn alt" id="backToPricing" href="/pricing/">Back to pricing</a>
+      </div>
+      <div class="meta" id="status">loading</div>
+    </section>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const accountId = params.get('account_id') || '';
+
+    async function boot() {
+      const [catalogResp, providerResp, accessResp] = await Promise.all([
+        fetch('/api/access/catalog', { credentials: 'same-origin' }),
+        fetch('/api/billing/provider', { credentials: 'same-origin' }),
+        fetch(accountId ? `/api/access/me?account_id=${encodeURIComponent(accountId)}` : '/api/access/me', { credentials: 'same-origin' }),
+      ]);
+      const catalog = await catalogResp.json();
+      const provider = await providerResp.json();
+      const access = await accessResp.json();
+      const planSelect = document.getElementById('planCode');
+      (catalog.plans || []).forEach((plan) => {
+        const option = document.createElement('option');
+        option.value = plan.plan_code;
+        option.textContent = `${plan.label} (${plan.plan_code})`;
+        if (params.get('plan_code') === plan.plan_code) option.selected = true;
+        planSelect.appendChild(option);
+      });
+      if (!planSelect.value && planSelect.options.length) planSelect.value = planSelect.options[0].value;
+      document.getElementById('backToPricing').href = access.account_id ? `/pricing/?account_id=${encodeURIComponent(access.account_id)}` : '/pricing/';
+      document.getElementById('status').textContent = JSON.stringify({
+        account_id: access.account_id || '',
+        provider: provider.provider || '',
+        ready: provider.ready || false,
+        missing: provider.missing || [],
+      }, null, 2);
+      document.getElementById('createCheckout').addEventListener('click', async () => {
+        const response = await fetch('/api/billing/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            account_id: access.account_id || accountId,
+            plan_code: planSelect.value,
+          }),
+          credentials: 'same-origin',
+        });
+        const data = await response.json();
+        document.getElementById('status').textContent = JSON.stringify(data, null, 2);
+      });
+      document.getElementById('openPortal').addEventListener('click', async () => {
+        const response = await fetch('/api/billing/portal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            account_id: access.account_id || accountId,
+          }),
+          credentials: 'same-origin',
+        });
+        const data = await response.json();
+        document.getElementById('status').textContent = JSON.stringify(data, null, 2);
+      });
+    }
+    boot().catch((error) => {
+      document.getElementById('status').textContent = String(error);
+    });
+  </script>
+</body>
+
+</html>

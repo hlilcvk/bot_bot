@@ -1,0 +1,31 @@
+{
+  "title": "AI Layers",
+  "subtitle": "Registry-backed AI capability layers preserved in the product shell.",
+  "layers": [
+    {
+      "id": "analyzer",
+      "label": "Analyzer",
+      "summary": "Reads deterministic truth and produces structured analysis."
+    },
+    {
+      "id": "explainer",
+      "label": "Explainer",
+      "summary": "Turns scores and events into readable evidence-bound explanations."
+    },
+    {
+      "id": "risk_critic",
+      "label": "Risk Critic",
+      "summary": "Flags weak evidence, regime drift, and confidence erosion."
+    },
+    {
+      "id": "operator_recommender",
+      "label": "Operator Recommender",
+      "summary": "Suggests operator actions within permission and evidence boundaries."
+    },
+    {
+      "id": "auditor_commentary",
+      "label": "Auditor Commentary",
+      "summary": "Summarizes audit findings without overriding deterministic truth."
+    }
+  ]
+}

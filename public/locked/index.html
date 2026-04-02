@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PROPTREX Radar Locked</title>
+  <style>
+    body { margin: 0; font-family: Inter, Segoe UI, Arial, sans-serif; background: radial-gradient(circle at top, rgba(255, 127, 127, 0.14), transparent 30%), linear-gradient(180deg, #09111a, #060c13); color: #eef5fb; }
+    .shell { max-width: 820px; margin: 0 auto; padding: 42px 18px 54px; }
+    .card { background: rgba(10, 20, 32, 0.96); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 22px; }
+    h1 { margin-top: 0; font-size: clamp(34px, 5vw, 56px); }
+    p { color: #9fb3c7; line-height: 1.6; }
+    .meta { display: grid; gap: 10px; margin-top: 18px; }
+    .row { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid rgba(255,255,255,0.07); }
+    .row:first-child { border-top: 0; }
+    a { display: inline-flex; margin-top: 16px; padding: 12px 16px; border-radius: 999px; text-decoration: none; color: #07111b; background: #7fe5c8; font-weight: 800; }
+    a.alt { color: #eef5fb; background: transparent; border: 1px solid rgba(255,255,255,0.12); margin-left: 10px; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="card">
+      <h1>Access closed</h1>
+      <p>The server marked this account as locked. Use pricing or checkout to restore access if a valid paid state exists.</p>
+      <div class="meta" id="meta"></div>
+      <a href="/pricing/">Pricing</a>
+      <a class="alt" id="checkout" href="/checkout/">Checkout</a>
+    </section>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const accountId = params.get('account_id') || '';
+    const reason = params.get('reason') || '';
+    const meta = document.getElementById('meta');
+    [
+      ['Account', accountId || 'n/a'],
+      ['Reason', reason || 'n/a'],
+      ['Route', '/locked/'],
+    ].forEach(([left, right]) => {
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<div></div><div></div>';
+      row.children[0].textContent = left;
+      row.children[1].textContent = right;
+      meta.appendChild(row);
+    });
+    document.getElementById('checkout').href = accountId ? `/checkout/?account_id=${encodeURIComponent(accountId)}` : '/checkout/';
+  </script>
+</body>
+</html>
+

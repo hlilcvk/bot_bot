@@ -1,0 +1,119 @@
+{
+  "authorized_roots": [
+    "main.py",
+    "auditor.py",
+    "data",
+    "public",
+    "proptrex_radar",
+    "rapor"
+  ],
+  "transient_artifacts": [
+    "__pycache__",
+    ".pytest_cache",
+    "public/proptrex_radar/evidence/build"
+  ],
+  "local_dev_artifacts": [
+    ".idea"
+  ],
+  "route_expectations": [
+    {
+      "method": "GET",
+      "route": "/"
+    },
+    {
+      "method": "GET",
+      "route": "/index.html"
+    },
+    {
+      "method": "GET",
+      "route": "/proptrex_radar/"
+    },
+    {
+      "method": "GET",
+      "route": "/radar/?account_id=acct_trial"
+    },
+    {
+      "method": "GET",
+      "route": "/pricing/"
+    },
+    {
+      "method": "GET",
+      "route": "/checkout/"
+    },
+    {
+      "method": "GET",
+      "route": "/locked/"
+    },
+    {
+      "method": "GET",
+      "route": "/control/overview?admin_id=admin_super"
+    },
+    {
+      "method": "GET",
+      "route": "/api/health"
+    },
+    {
+      "method": "GET",
+      "route": "/api/access/catalog"
+    },
+    {
+      "method": "GET",
+      "route": "/api/access/me?account_id=acct_trial"
+    },
+    {
+      "method": "GET",
+      "route": "/api/billing/provider"
+    },
+    {
+      "method": "GET",
+      "route": "/api/radar/realization/summary"
+    },
+    {
+      "method": "GET",
+      "route": "/api/radar/realization/filter-groups"
+    },
+    {
+      "method": "GET",
+      "route": "/api/radar/realization/signals"
+    },
+    {
+      "method": "GET",
+      "route": "/api/control/context?admin_id=admin_super"
+    },
+    {
+      "method": "GET",
+      "route": "/api/control/overview?admin_id=admin_super"
+    },
+    {
+      "method": "GET",
+      "route": "/api/control/overview/realization?admin_id=admin_super"
+    },
+    {
+      "method": "GET",
+      "route": "/api/control/users?admin_id=admin_super"
+    },
+    {
+      "method": "GET",
+      "route": "/api/control/crm?admin_id=admin_super"
+    },
+    {
+      "method": "GET",
+      "route": "/api/control/finance?admin_id=admin_super"
+    },
+    {
+      "method": "GET",
+      "route": "/api/control/audit?admin_id=admin_super"
+    },
+    {
+      "method": "POST",
+      "route": "/api/telegram/link-session"
+    }
+  ],
+  "forbidden_markers": [
+    "mock",
+    "fake",
+    "dummy",
+    "stub",
+    "placeholder"
+  ]
+}

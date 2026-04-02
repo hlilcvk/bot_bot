@@ -1,0 +1,61 @@
+{
+  "groups": [
+    {
+      "title": "Signals",
+      "items": [
+        {
+          "id": "onlyLong",
+          "label": "Long",
+          "pill": "LONG",
+          "style": "border-color:rgba(22,163,74,.3)"
+        },
+        {
+          "id": "onlyShort",
+          "label": "Short",
+          "pill": "SHORT",
+          "style": "border-color:rgba(239,68,68,.3)"
+        },
+        {
+          "id": "squeeze",
+          "label": "Squeeze",
+          "pill": "SQ",
+          "style": "border-color:rgba(249,115,22,.3)"
+        },
+        {
+          "id": "leadLag",
+          "label": "Lead-Lag",
+          "pill": "LL",
+          "style": "border-color:rgba(37,99,235,.3)"
+        },
+        {
+          "id": "highConf",
+          "label": "High Confluence",
+          "pill": "CONF",
+          "style": "border-color:rgba(168,85,247,.3)"
+        }
+      ]
+    },
+    {
+      "title": "Filters",
+      "items": [
+        {
+          "id": "onlyPriority",
+          "label": "Priority"
+        },
+        {
+          "id": "nearEntry",
+          "label": "Near Entry"
+        },
+        {
+          "id": "whaleAligned",
+          "label": "Whale"
+        },
+        {
+          "id": "hideDuplicates",
+          "label": "Dedup",
+          "defaultOn": true
+        }
+      ]
+    }
+  ]
+}

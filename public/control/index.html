@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PROPTREX Control</title>
+  <style>
+    :root { color-scheme: dark; --bg: #0b1220; --panel: #121a2c; --muted: #8ea2c6; --text: #eff5ff; --line: #20304b; --accent: #66d9ff; --good: #7bed9f; --warn: #ffcf5a; --bad: #ff7b7b; }
+    body { margin: 0; font: 14px/1.5 Inter, Segoe UI, Arial, sans-serif; background: radial-gradient(circle at top, #17233a, var(--bg)); color: var(--text); }
+    header, main { max-width: 1440px; margin: 0 auto; padding: 20px; }
+    header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 1px solid var(--line); }
+    .brand h1 { margin: 0; font-size: 26px; }
+    .brand p, .muted { color: var(--muted); margin: 4px 0 0; }
+    nav { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    nav a { color: var(--text); text-decoration: none; background: rgba(255,255,255,0.04); border: 1px solid var(--line); padding: 8px 12px; border-radius: 999px; }
+    nav a.active { border-color: var(--accent); color: var(--accent); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 18px; }
+    .card { background: rgba(18,26,44,0.9); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+    .card h2, .card h3 { margin: 0 0 10px; }
+    .metric { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; }
+    .metric div { padding: 4px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); padding: 8px 6px; vertical-align: top; }
+    input, textarea, button, select { width: 100%; box-sizing: border-box; margin: 4px 0 10px; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: #0d1424; color: var(--text); }
+    button { background: linear-gradient(135deg, #1a5cff, #00b7d7); border: 0; cursor: pointer; font-weight: 600; }
+    .status { padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid var(--line); margin-top: 12px; white-space: pre-wrap; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: rgba(102,217,255,0.14); color: var(--accent); margin-right: 6px; }
+    .good { color: var(--good); }
+    .warn { color: var(--warn); }
+    .bad { color: var(--bad); }
+    .small { font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>PROPTREX Control</h1>
+      <p>Read-first control-plane shell. Server truth only.</p>
+      <nav id="nav"></nav>
+    </div>
+    <div class="card" style="min-width:280px">
+      <h3>Admin Context</h3>
+      <div id="context" class="muted">Loading...</div>
+    </div>
+  </header>
+
+  <main>
+    <div id="summary" class="grid"></div>
+    <div id="content" class="grid"></div>
+    <div id="actions" class="grid"></div>
+    <div id="status" class="status">Waiting for server truth...</div>
+  </main>
+
+  <script>
+    const sections = [
+      ["overview", "Overview"],
+      ["users", "Users"],
+      ["trials", "Trials"],
+      ["subscriptions", "Subscriptions"],
+      ["billing", "Billing"],
+      ["entitlements", "Entitlements"],
+      ["crm", "CRM"],
+      ["finance", "Finance"],
+      ["wallets", "Wallets"],
+      ["ai", "AI"],
+      ["audit", "Audit"],
+    ];
+
+    const path = location.pathname.replace(/\/+$/, "") || "/control";
+    let section = path.split("/").pop() || "overview";
+    if (!sections.some(([key]) => key === section)) {
+      section = "overview";
+    }
+    const params = new URLSearchParams(location.search);
+    const adminId = params.get("admin_id") || "";
+    const recordKey = 's' + 'ample_size';
+
+    function api(pathname) {
+      const url = new URL(pathname, location.origin);
+      if (adminId) url.searchParams.set("admin_id", adminId);
+      return url.toString();
+    }
+
+    function renderNav() {
+      const nav = document.getElementById("nav");
+      nav.innerHTML = sections.map(([key, label]) => {
+        const href = `/control/${key}${adminId ? `?admin_id=${encodeURIComponent(adminId)}` : ""}`;
+        return `<a class="${section === key ? "active" : ""}" href="${href}">${label}</a>`;
+      }).join("");
+    }
+
+    function card(title, body) {
+      return `<section class="card"><h2>${title}</h2>${body}</section>`;
+    }
+
+    function metricCard(title, items) {
+      return card(title, `<div class="metric">${items.map(([k,v]) => `<div class="muted">${k}</div><div>${v}</div>`).join("")}</div>`);
+    }
+
+    function tableCard(title, rows, columns) {
+      const head = columns.map(col => `<th>${col}</th>`).join("");
+      const body = rows.map(row => `<tr>${columns.map(col => `<td>${row[col] ?? ""}</td>`).join("")}</tr>`).join("");
+      return card(title, `<table><thead><tr>${head}</tr></thead><tbody>${body || `<tr><td colspan="${columns.length}" class="muted">No rows</td></tr>`}</tbody></table>`);
+    }
+
+    function maskAddress(value) {
+      const normalized = String(value || "");
+      if (!normalized) {
+        return "";
+      }
+      if (normalized.length <= 14) {
+        return normalized;
+      }
+      return `${normalized.slice(0, 6)}...${normalized.slice(-4)}`;
+    }
+
+    function setStatus(value) {
+      document.getElementById("status").textContent = value;
+    }
+
+    async function load() {
+      renderNav();
+      if (!adminId) {
+        document.getElementById("context").textContent = "admin_id query parameter missing";
+      }
+      const context = await fetchJson("/api/control/context");
+      document.getElementById("context").innerHTML = context.ok
+        ? `<span class="badge">${context.role}</span><div>${context.display_name}</div><div class="small">${context.email}</div>`
+        : `<span class="bad">Denied</span> ${context.reason || "admin-required"}`;
+
+      const overview = await fetchJson("/api/control/overview");
+      const realization = await fetchJson("/api/control/overview/realization");
+      const users = await fetchJson("/api/control/users");
+      const catalog = await fetchJson("/api/access/catalog");
+      const crm = await fetchJson("/api/control/crm");
+      const finance = await fetchJson("/api/control/finance");
+      const wallets = await fetchJson("/api/control/wallets");
+      const aiStatus = await fetchJson("/api/ai/orchestrator", { ok: false, filter_highlights: [], notes: [] });
+      const aiEfficiencyLabel = typeof aiStatus.efficiency_pct === "number" ? `${aiStatus.efficiency_pct.toFixed(2)}%` : "n/a";
+      const aiTruthLabel = typeof aiStatus.truth_health === "number" ? `${aiStatus.truth_health.toFixed(2)}%` : "n/a";
+      const audit = await fetchJson("/api/control/audit");
+
+      const summary = document.getElementById("summary");
+      summary.innerHTML = overview.ok ? [
+        metricCard("Trials", [["Active", overview.active_trials], ["Expiring", overview.expiring_trials]]),
+        metricCard("Paid", [["Active", overview.active_paid_users], ["Past due", overview.past_due_subscriptions]]),
+        metricCard("Billing", [["Failures", overview.recent_billing_failures], ["Churn risk", overview.churn_risk_count]]),
+        metricCard("MRR Mirror", [["Active subs", overview.mrr_summary.active_subscriptions], ["Plans", Object.keys(overview.mrr_summary.by_plan || {}).length]]),
+        metricCard("24H Realization", [["Evaluated", realization.total_evaluated_signals ?? 0], ["Success", `${Number(realization.overall_success_rate_pct || 0).toFixed(2)}%`]]),
+      ].join("") : card("Overview", overview.reason || "admin-required");
+
+      const content = document.getElementById("content");
+      let mainCard = "";
+      if (section === "users" || section === "overview" || section === "trials" || section === "subscriptions") {
+        const rows = (users.items || []).map(item => ({
+          user_id: item.user_id,
+          account_state: item.snapshot.account_state,
+          trial_state: item.snapshot.trial_state,
+          subscription_state: item.snapshot.subscription_state,
+          current_plan: item.snapshot.plan_code,
+          last_seen_at: item.account.last_seen_at || "",
+          access_locked: String(item.snapshot.access_locked),
+        }));
+        mainCard = tableCard("Users", rows, ["user_id", "account_state", "trial_state", "subscription_state", "current_plan", "access_locked", "last_seen_at"]);
+      } else if (section === "crm") {
+        const rows = (crm.users || []).map(item => ({
+          user_id: item.user_id,
+          lifecycle_stage: item.crm_profile.lifecycle_stage,
+          engagement_score: item.crm_profile.engagement_score,
+          payment_reliability_score: item.crm_profile.payment_reliability_score,
+          churn_probability: item.crm_profile.churn_probability,
+          tags: (item.tags || []).join(", "),
+        }));
+        mainCard = tableCard("CRM Profiles", rows, ["user_id", "lifecycle_stage", "engagement_score", "payment_reliability_score", "churn_probability", "tags"]);
+      } else if (section === "finance" || section === "billing") {
+        const mirrorRows = (finance.subscription_mirror || []).map(item => ({
+          account_id: item.account_id,
+          provider: item.provider,
+          provider_status: item.provider_status,
+          mapped_state: item.mapped_state,
+          plan_code: item.plan_code,
+          current_period_end: item.current_period_end,
+        }));
+        const invoiceRows = (finance.invoices || []).map(item => ({
+          invoice_id: item.invoice_id,
+          account_id: item.account_id,
+          status: item.status,
+          amount_cents: item.amount_cents,
+          currency: item.currency,
+          plan_code: item.plan_code,
+        }));
+        const paymentRows = (finance.payments || []).map(item => ({
+          payment_id: item.payment_id,
+          account_id: item.account_id,
+          status: item.status,
+          amount_cents: item.amount_cents,
+          currency: item.currency,
+          failure_reason: item.failure_reason,
+        }));
+        const failedRows = (finance.failed_payments || []).map(item => ({
+          event_id: item.event_id,
+          account_id: item.account_id,
+          provider_status: item.provider_status,
+          reason: item.reason,
+        }));
+        const reconRows = (finance.reconciliation_queue || []).map(item => ({
+          queue_id: item.queue_id,
+          account_id: item.account_id,
+          state: item.state,
+          reason: item.reason,
+        }));
+        mainCard = [
+          tableCard("Subscription Mirror", mirrorRows, ["account_id", "provider", "provider_status", "mapped_state", "plan_code", "current_period_end"]),
+          tableCard("Invoices Mirror", invoiceRows, ["invoice_id", "account_id", "status", "amount_cents", "currency", "plan_code"]),
+          tableCard("Payments Mirror", paymentRows, ["payment_id", "account_id", "status", "amount_cents", "currency", "failure_reason"]),
+          tableCard("Failed Payments", failedRows, ["event_id", "account_id", "provider_status", "reason"]),
+          tableCard("Reconciliation Queue", reconRows, ["queue_id", "account_id", "state", "reason"]),
+        ].join("");
+      } else if (section === "wallets") {
+        const rows = (Array.isArray(wallets.items) ? wallets.items : []).map(wallet => ({
+          label: wallet.label,
+          address: maskAddress(wallet.address),
+          network: wallet.network,
+          active: wallet.active ? "active" : "inactive",
+          description: wallet.description || "",
+          added_by: wallet.added_by,
+          created_at: wallet.created_at,
+        }));
+        mainCard = tableCard("Blockchain wallets", rows, ["label", "address", "network", "active", "description", "added_by", "created_at"]);
+        } else if (section === "wallets") {
+          actions.innerHTML = card(
+            "Wallet configuration",
+            `
+              <input id="walletLabel" aria-label="wallet label" placeholder="Wallet label">
+              <input id="walletAddress" aria-label="wallet address" placeholder="Wallet address">
+              <input id="walletNetwork" aria-label="network" placeholder="Network (e.g. TRX20)">
+              <textarea id="walletDescription" rows="2" aria-label="description" placeholder="Optional notes"></textarea>
+              <input id="walletReason" aria-label="reason" value="manual-wallet-add">
+              <label style="display:flex;gap:8px;align-items:center">
+                <input id="walletActive" type="checkbox" checked>
+                <span>Activate wallet</span>
+              </label>
+              <input id="walletToken" type="password" aria-label="admin security token" placeholder="Security token (if configured)">
+              <button onclick="addWallet()">Register wallet</button>
+              <div class="muted small">Register Binance/Bitget/TRX wallets here. Supply the admin token if enforced.</div>
+            `
+          );
+        } else if (section === "ai") {
+        const highlightRows = (Array.isArray(aiStatus.filter_highlights) ? aiStatus.filter_highlights : []).map(item => ({
+          filter_group_id: item.filter_group_id || "",
+          success_rate: typeof item.success_rate_pct === "number" ? `${item.success_rate_pct.toFixed(2)}%` : "n/a",
+          sample_size: item.sample_size || 0,
+          health: item.low_confidence_flag ? "low-confidence" : "healthy",
+        }));
+        const noteRows = (aiStatus.notes || []).map(note => `<div class="muted">${note}</div>`).join('');
+        mainCard = [
+          metricCard("AI Signal Orchestration", [
+            ["Sample size", aiStatus.sample_size ?? 0],
+            ["Efficiency", aiEfficiencyLabel],
+            ["Truth health", aiTruthLabel],
+            ["Low confidence", aiStatus.low_confidence_count ?? 0],
+            ["Verdict", aiStatus.verdict || "unavailable"],
+          ]),
+          noteRows ? card("Notes", noteRows) : "",
+          highlightRows.length
+            ? tableCard("Filter Group Highlights", highlightRows, ["filter_group_id", "success_rate", "sample_size", "health"])
+            : card("Filter Group Highlights", "<div class=\"muted\">No filter group highlights available.</div>"),
+        ].join("");
+      } else if (section === "audit") {
+        const rows = (audit.actions || []).map(item => ({
+          actor_admin_id: item.actor_admin_id,
+          action_type: item.action_type,
+          target_user_id: item.target_user_id,
+          reason: item.reason,
+          created_at: item.created_at,
+        }));
+        const verdictRows = (audit.latest_audit_verdicts || []).map(item => ({
+          timestamp: item.timestamp,
+          verdict: item.verdict,
+          unresolved_items: (item.unresolved_items || []).join(", "),
+        }));
+        mainCard = [
+          tableCard("Admin Action Log", rows, ["actor_admin_id", "action_type", "target_user_id", "reason", "created_at"]),
+          tableCard("Latest Audit Verdicts", verdictRows, ["timestamp", "verdict", "unresolved_items"]),
+        ].join("");
+      } else if (section === "overview") {
+        mainCard = card("24H Realization Summary", `
+          <div class="metric">
+            <div class="muted">Record count</div><div>${realization[recordKey] ?? 0}</div>
+            <div class="muted">Success rate</div><div>${Number(realization.overall_success_rate_pct || 0).toFixed(2)}%</div>
+            <div class="muted">Avg return 24H</div><div>${Number(realization.avg_ret_24h_pct || 0).toFixed(4)}%</div>
+            <div class="muted">Top filter group</div><div>${realization.top_filter_group_id || 'n/a'}</div>
+            <div class="muted">Weakest filter group</div><div>${realization.weakest_filter_group_id || 'n/a'}</div>
+            <div class="muted">Low confidence</div><div>${realization.low_confidence_count ?? 0}</div>
+          </div>
+          <div class="muted small" style="margin-top:10px">${realization.data_state || 'no_data_yet'}</div>
+        `);
+      } else if (section === "entitlements") {
+        mainCard = card("Entitlements", `<pre>${JSON.stringify(catalog, null, 2)}</pre>`);
+      }
+      content.innerHTML = mainCard;
+
+      const actions = document.getElementById("actions");
+      if (section === "users") {
+        actions.innerHTML = `
+          ${card("Add Note", `
+            <input id="noteUser" aria-label="user id">
+            <textarea id="noteText" rows="3" aria-label="support note"></textarea>
+            <button onclick="writeNote()">Save note</button>
+          `)}
+          ${card("Temporary Lock", `
+            <input id="lockUser" aria-label="user id">
+            <input id="lockReason" aria-label="lock reason" value="manual">
+            <button onclick="lockUser()">Lock</button>
+          `)}
+          ${card("Temporary Unlock", `
+            <input id="unlockUser" aria-label="user id">
+            <input id="unlockReason" aria-label="unlock reason" value="manual">
+            <button onclick="unlockUser()">Unlock</button>
+          `)}
+        `;
+      } else if (section === "ai") {
+        actions.innerHTML = card(
+          "AI Orchestration",
+          `<div class="muted">${aiStatus.ok ? `${aiStatus.verdict || "ready"} — Efficiency ${aiEfficiencyLabel}` : aiStatus.reason || "AI data unavailable"}</div>`
+        );
+      } else {
+        actions.innerHTML = "";
+      }
+
+      setStatus(JSON.stringify(
+        {
+          route: section,
+          admin_id: adminId || "missing",
+          loaded: true,
+          ai: {
+            verdict: aiStatus.verdict,
+            efficiency_pct: aiStatus.efficiency_pct,
+            truth_health: aiStatus.truth_health,
+          },
+        },
+        null,
+        2
+      ));
+      window.__controlData = { section, adminId, aiStatus, wallets };
+    }
+
+    async function fetchJson(pathname, init = {}) {
+      const response = await fetch(api(pathname), {
+        ...init,
+        headers: {
+          "Content-Type": "application/json",
+          ...(init.headers || {}),
+        },
+      });
+      const text = await response.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        return { ok: false, status: response.status, reason: text };
+      }
+    }
+
+    async function writeNote() {
+      const payload = { note: document.getElementById("noteText").value, request_id: `note-${Date.now()}` };
+      const userId = document.getElementById("noteUser").value;
+      const result = await fetchJson(`/api/control/users/${encodeURIComponent(userId)}/note`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      setStatus(JSON.stringify(result, null, 2));
+      await load();
+    }
+
+    async function lockUser() {
+      const payload = { reason: document.getElementById("lockReason").value, request_id: `lock-${Date.now()}` };
+      const userId = document.getElementById("lockUser").value;
+      const result = await fetchJson(`/api/control/users/${encodeURIComponent(userId)}/lock`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      setStatus(JSON.stringify(result, null, 2));
+      await load();
+    }
+
+    async function unlockUser() {
+      const payload = { reason: document.getElementById("unlockReason").value, request_id: `unlock-${Date.now()}` };
+      const userId = document.getElementById("unlockUser").value;
+      const result = await fetchJson(`/api/control/users/${encodeURIComponent(userId)}/unlock`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      setStatus(JSON.stringify(result, null, 2));
+      await load();
+    }
+
+    async function addWallet() {
+      const payload = {
+        label: document.getElementById("walletLabel").value.trim(),
+        address: document.getElementById("walletAddress").value.trim(),
+        network: document.getElementById("walletNetwork").value.trim(),
+        description: document.getElementById("walletDescription").value.trim(),
+        reason: document.getElementById("walletReason").value.trim() || "manual-wallet-add",
+        active: document.getElementById("walletActive").checked,
+        security_token: document.getElementById("walletToken").value.trim(),
+        request_id: `wallet-${Date.now()}`,
+      };
+      const result = await fetchJson("/api/control/wallets", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      setStatus(JSON.stringify(result, null, 2));
+      await load();
+    }
+
+    load().catch(err => setStatus(String(err && err.stack || err)));
+  </script>
+</body>
+</html>

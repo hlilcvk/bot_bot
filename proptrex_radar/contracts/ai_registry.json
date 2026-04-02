@@ -1,0 +1,27 @@
+{
+  "canonical_roles": [
+    "analyzer",
+    "explainer",
+    "risk_critic",
+    "operator_recommender",
+    "auditor_commentary"
+  ],
+  "evidence_sources": [
+    "scores",
+    "realization metrics",
+    "regime state",
+    "health state",
+    "telegram state",
+    "entitlement state",
+    "CRM profile",
+    "finance mirror",
+    "audit findings"
+  ],
+  "permission_matrix": {
+    "analyzer": ["read_truth"],
+    "explainer": ["read_truth"],
+    "risk_critic": ["read_truth"],
+    "operator_recommender": ["read_truth", "suggest_actions"],
+    "auditor_commentary": ["read_truth", "summarize_audit"]
+  }
+}

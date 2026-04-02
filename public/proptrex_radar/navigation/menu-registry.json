@@ -1,0 +1,9 @@
+{
+  "items": [
+    {
+      "id": "proptrex_radar",
+      "label": "PROPTREX Radar",
+      "route": "/proptrex_radar/"
+    }
+  ]
+}

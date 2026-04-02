@@ -1,0 +1,38 @@
+# ──────────────────────────────────
+#  PROPTREX Radar - .gitignore
+# ──────────────────────────────────
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# SQLite database (runtime generated)
+data/proptrex_radar.sqlite3
+
+# Auditor evidence logs (can grow to 500MB+)
+proptrex_radar/control/auditor/evidence/*.json
+proptrex_radar/control/auditor/evidence/summaries/
+
+# Temp / scratch files
+temp_patch.py

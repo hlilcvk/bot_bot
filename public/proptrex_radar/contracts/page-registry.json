@@ -1,0 +1,14 @@
+{
+  "product": "proptrex_radar",
+  "label": "PROPTREX Radar",
+  "canonicalRoute": "/proptrex_radar/",
+  "customerRoute": "/radar/",
+  "commercialRoutes": [
+    "/pricing/",
+    "/checkout/",
+    "/locked/"
+  ],
+  "shell": "PROPTREX",
+  "mode": "overlay",
+  "surface": "product"
+}
